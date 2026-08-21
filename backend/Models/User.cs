@@ -13,7 +13,7 @@ public partial class User
 
     public string Role { get; set; } = null!;
 
-    public virtual EmployerProfile? EmployerProfile { get; set; }
+    public virtual Employerprofile? Employerprofile { get; set; }
 
-    public virtual FinderProfile? FinderProfile { get; set; }
+    public virtual Finderprofile? Finderprofile { get; set; }
 }

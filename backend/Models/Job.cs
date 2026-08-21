@@ -27,15 +27,15 @@ public partial class Job
 
     public int? Salary { get; set; }
 
-    public bool IsNegotiable { get; set; }
+    public ulong IsNegotiable { get; set; }
 
     public string Location { get; set; } = null!;
 
     public string? SkillRequired { get; set; }
 
-    public DateTime CreateAt { get; set; }
+    public DateTime CreatedAt { get; set; }
 
     public virtual ICollection<Application> Applications { get; set; } = new List<Application>();
 
-    public virtual EmployerProfile Employer { get; set; } = null!;
+    public virtual Employerprofile Employer { get; set; } = null!;
 }
