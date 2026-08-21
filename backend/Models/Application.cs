@@ -11,13 +11,13 @@ public partial class Application
 
     public string JobId { get; set; } = null!;
 
-    public string? Status { get; set; }
+    public string Status { get; set; } = null!;
 
     public DateTime AppliedAt { get; set; }
 
     public string? CoverLetter { get; set; }
 
-    public virtual FinderProfile Finder { get; set; } = null!;
+    public virtual Finderprofile Finder { get; set; } = null!;
 
     public virtual Job Job { get; set; } = null!;
 }

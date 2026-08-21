@@ -3,7 +3,7 @@ using System.Collections.Generic;
 
 namespace backend.Models;
 
-public partial class EmployerProfile
+public partial class Employerprofile
 {
     public string UserId { get; set; } = null!;
 

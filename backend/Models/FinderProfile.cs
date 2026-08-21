@@ -3,7 +3,7 @@ using System.Collections.Generic;
 
 namespace backend.Models;
 
-public partial class FinderProfile
+public partial class Finderprofile
 {
     public string UserId { get; set; } = null!;
 
