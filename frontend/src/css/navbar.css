@@ -1,0 +1,25 @@
+#menu-item a {
+    position: relative;
+    font-size: 14px;
+}
+
+#menu-item a::after {
+    content: "";
+    position: absolute;
+    
+    left: 50%;
+    bottom: -6px;
+
+    width: 0;
+    height: 3px;
+
+    background: white;
+    border-radius: 999px;
+
+    transform: translateX(-50%);
+    transition: width 0.3s ease;
+}
+
+#menu-item a:hover::after {
+    width: 100%;
+}
