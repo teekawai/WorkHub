@@ -21,8 +21,6 @@ public partial class Employerprofile
 
     public int? FoundedYear { get; set; }
 
-    public string Email { get; set; } = null!;
-
     public string Phone { get; set; } = null!;
 
     public string TaxCode { get; set; } = null!;

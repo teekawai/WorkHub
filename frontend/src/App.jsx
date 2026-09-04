@@ -8,17 +8,17 @@ import Login from './pages/Login'
 import { Route, Routes } from 'react-router-dom'
 import { ROUTE_PATH } from './routes/route'
 import NavBar from './components/NavBar'
+import ProtectedRoute from './routes/protectedRoutes'
 function App() {
-  const [count, setCount] = useState(0)
-  const currentUser = JSON.parse(localStorage.getItem("currentUser"))
+  const [currentUser, setCurrentUser] = useState(() => JSON.parse(localStorage.getItem("currentUser")))
 
   return (
     <>
       <Routes>
-        <Route path={ROUTE_PATH.AUTH.REGISTER} element={<Register />}></Route>
-        <Route path={ROUTE_PATH.AUTH.LOGIN} element={<Login />}></Route>
-        <Route path={ROUTE_PATH.FINDER.HOME } element={<NavBar currentUser={currentUser}/>}></Route>
-        <Route path={ROUTE_PATH.EMPLOYER.HOME } element={<NavBar currentUser={currentUser}/>}></Route>
+        <Route path={ROUTE_PATH.AUTH.REGISTER} element={<Register setCurrentUser={setCurrentUser} />}></Route>
+        <Route path={ROUTE_PATH.AUTH.LOGIN} element={<Login setCurrentUser={setCurrentUser} />}></Route>
+        <Route path={ROUTE_PATH.FINDER.HOME } element={<ProtectedRoute role="finder"><NavBar currentUser={currentUser}/></ProtectedRoute>}></Route>
+        <Route path={ROUTE_PATH.EMPLOYER.HOME } element={<ProtectedRoute role="employer"><NavBar currentUser={currentUser}/></ProtectedRoute>}></Route>
         <Route path='/' element ={<NavBar currentUser={currentUser} /> }></Route>        
       </Routes>
 

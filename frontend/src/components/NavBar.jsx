@@ -1,4 +1,4 @@
-import "../css/navbar.css"
+import { useState, useEffect, useRef } from "react"
 import { Link, useNavigate } from "react-router-dom"
 import { ROUTE_PATH } from "../routes/route"
 import { logout } from "../api/auth"
@@ -6,6 +6,29 @@ import defaultAvatar from "../assets/avt-macdinh.webp"
 
 function NavBar({ currentUser }) {
     const navigate = useNavigate()
+    const [menuOpen, setMenuOpen] = useState(false)
+    const [dropdownOpen, setDropdownOpen] = useState(false)
+    const dropdownRef = useRef(null)
+
+    // Đóng dropdown khi click ra ngoài
+    useEffect(() => {
+        function handleClickOutside(e) {
+            if (dropdownRef.current && !dropdownRef.current.contains(e.target)) {
+                setDropdownOpen(false)
+            }
+        }
+        document.addEventListener("mousedown", handleClickOutside)
+        return () => document.removeEventListener("mousedown", handleClickOutside)
+    }, [])
+
+    // Đóng mobile menu khi resize lên desktop
+    useEffect(() => {
+        function handleResize() {
+            if (window.innerWidth >= 768) setMenuOpen(false)
+        }
+        window.addEventListener("resize", handleResize)
+        return () => window.removeEventListener("resize", handleResize)
+    }, [])
 
     const handleLogout = async () => {
         try {
@@ -18,63 +41,142 @@ function NavBar({ currentUser }) {
         }
     }
 
+    const finderLinks = [
+        { label: "Tìm việc làm", to: "#" },
+        { label: "Việc đã ứng tuyển", to: "#" },
+    ]
+
+    const employerLinks = [
+        { label: "Đăng tin tuyển dụng", to: "#" },
+        { label: "Tin đã đăng", to: "#" },
+        { label: "Xem ứng viên", to: "#" },
+    ]
+
+    const navLinks = currentUser?.role === "employer" ? employerLinks : finderLinks
+
     return (
-        <nav className="h-20 bg-blue-600 flex justify-between items-center">
-            <div id="logo" className="flex h-full w-fit pl-10  items-center justify-center">
-                <a href="#" className="no-underline text-xl font-black">
-                    <span className="bg-white p-1 text-blue-600 rounded-lg px-2">Work</span> <span className="bg-blue-600 text-white">Hub</span>
-                </a>
-            </div>
-            {currentUser.role =="finder" ?<div id="menu-item" className="text-white text-sm flex justify-center gap-10">
-                <a href="#" className="">Tìm việc làm</a>
-                <a href="#">Việc đã ứng tuyển</a>
-            </div>: <div id="menu-item" className="text-white text-sm flex justify-center gap-10">
-                <a href="#" className="">Đăng tin tuyển dụng</a>
-                <a href="#">Các tin đã đăng</a>
-                <a href="#">Xem ứng viên</a>
-            </div>
-            }
-            
-            {currentUser ?
-                <div id="button" className="group relative pr-10 flex items-center">
-                    <div className="flex items-center gap-2 h-9 pl-4 pr-1 rounded-full bg-white/90 group-hover:bg-white transition-colors duration-200 ease-out cursor-pointer select-none shadow-sm">
-                        <span className="text-xs text-blue-700 font-medium whitespace-nowrap">
-                            Chào mừng, <span className="font-semibold">{currentUser.username}</span>
-                        </span>
-                        <img
-                            src={currentUser.avatar || defaultAvatar}
-                            alt="avatar"
-                            className="w-7 h-7 rounded-full object-cover border-2 border-white shadow-sm"
-                        />
+        <>
+            <nav className="sticky top-0 z-50 bg-blue-600 shadow-md">
+                <div className="max-w-7xl mx-auto px-5 h-16 flex items-center justify-between gap-6">
+
+                    {/* Logo */}
+                    <Link
+                        to={currentUser?.role === "finder" ? ROUTE_PATH.FINDER.HOME : ROUTE_PATH.EMPLOYER.HOME}
+                        className="flex items-center gap-1 shrink-0 no-underline"
+                    >
+                        <span className="text-lg font-black text-blue-600 bg-white px-2 py-0.5 rounded-md leading-tight">Work</span>
+                        <span className="text-lg font-black text-white">Hub</span>
+                    </Link>
+
+                    {/* Desktop nav links */}
+                    <div className="hidden md:flex items-center gap-1 flex-1 justify-center">
+                        {navLinks.map((link) => (
+                            <Link
+                                key={link.label}
+                                to={link.to}
+                                className="relative text-white/85 hover:text-white text-sm font-medium px-3 py-1.5 rounded-md hover:bg-white/10 transition-colors duration-150 no-underline"
+                            >
+                                {link.label}
+                            </Link>
+                        ))}
                     </div>
-                    <div className="absolute right-10 top-full pt-2 w-[150px] pointer-events-none group-hover:pointer-events-auto">
-                        <div
-                            id="drop-down-menu"
-                            className="bg-white rounded-lg shadow-lg flex flex-col z-20 overflow-hidden origin-top transition-all duration-300 ease-out opacity-0 -translate-y-2 scale-95 pointer-events-none group-hover:opacity-100 group-hover:translate-y-0 group-hover:scale-100 group-hover:pointer-events-auto"
+
+                    {/* Right side */}
+                    <div className="flex items-center gap-3 shrink-0">
+                        {currentUser ? (
+                            /* User dropdown */
+                            <div className="relative" ref={dropdownRef}>
+                                <button
+                                    onClick={() => setDropdownOpen(!dropdownOpen)}
+                                    className="flex items-center gap-2 h-9 pl-3 pr-1.5 rounded-full bg-white/15 hover:bg-white/25 transition-colors duration-150 cursor-pointer border border-white/20"
+                                >
+                                    <span className="text-xs text-white font-medium hidden sm:block whitespace-nowrap">
+                                        {currentUser.username}
+                                    </span>
+                                    <img
+                                        src={currentUser.avatar || defaultAvatar}
+                                        alt="avatar"
+                                        className="w-6 h-6 rounded-full object-cover border border-white/40"
+                                    />
+                                    {/* Chevron */}
+                                    <svg
+                                        className={`w-3 h-3 text-white/70 transition-transform duration-200 ${dropdownOpen ? "rotate-180" : ""}`}
+                                        fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}
+                                    >
+                                        <path strokeLinecap="round" strokeLinejoin="round" d="M19 9l-7 7-7-7" />
+                                    </svg>
+                                </button>
+
+                                {/* Dropdown menu */}
+                                {dropdownOpen && (
+                                    <div className="absolute right-0 top-full mt-2 w-44 bg-white rounded-xl shadow-lg overflow-hidden z-50 border border-gray-100">
+                                        <div className="px-3 py-2 border-b border-gray-100">
+                                            <p className="text-xs text-gray-400">Đăng nhập với tư cách</p>
+                                            <p className="text-xs font-semibold text-gray-700 capitalize">{currentUser.role}</p>
+                                        </div>
+                                        {currentUser.role === "finder"
+                                            ? <Link to={ROUTE_PATH.FINDER.PROFILE} onClick={() => setDropdownOpen(false)} className="block px-3 py-2 text-sm text-gray-700 hover:bg-blue-50 hover:text-blue-600 transition-colors no-underline">Hồ sơ cá nhân</Link>
+                                            : <Link to={ROUTE_PATH.EMPLOYER.PROFILE} onClick={() => setDropdownOpen(false)} className="block px-3 py-2 text-sm text-gray-700 hover:bg-blue-50 hover:text-blue-600 transition-colors no-underline">Hồ sơ công ty</Link>
+                                        }
+                                        <button
+                                            onClick={handleLogout}
+                                            className="w-full text-left px-3 py-2 text-sm text-red-500 hover:bg-red-50 transition-colors"
+                                        >
+                                            Đăng xuất
+                                        </button>
+                                    </div>
+                                )}
+                            </div>
+                        ) : (
+                            /* Auth buttons */
+                            <div className="flex items-center gap-2">
+                                <Link to={ROUTE_PATH.AUTH.LOGIN} className="px-3 py-1.5 text-sm font-semibold bg-white text-blue-600 rounded-full hover:bg-gray-100 transition-colors no-underline">
+                                    Đăng nhập
+                                </Link>
+                                <Link to={ROUTE_PATH.AUTH.REGISTER} className="px-3 py-1.5 text-sm font-medium text-white/90 rounded-full hover:bg-white/15 hover:text-white transition-colors no-underline">
+                                    Đăng ký
+                                </Link>
+                            </div>
+                        )}
+
+                        {/* Hamburger — mobile only */}
+                        <button
+                            className="md:hidden flex items-center justify-center w-9 h-9 rounded-md hover:bg-white/15 transition-colors text-white"
+                            onClick={() => setMenuOpen(!menuOpen)}
+                            aria-label="Toggle menu"
                         >
-                            {currentUser.role === "finder"
-                                ? <Link to={ROUTE_PATH.FINDER.PROFILE} className="px-3 py-2 text-xs hover:bg-gray-100 transition-colors duration-150">Hồ sơ cá nhân</Link>
-                                : <Link to={ROUTE_PATH.EMPLOYER.PROFILE} className="px-3 py-2 text-xs hover:bg-gray-100 transition-colors duration-150">Hồ sơ nhà tuyển dụng</Link>}
-                            <button onClick={handleLogout} className="px-3 py-2 text-xs text-left hover:bg-gray-100 transition-colors duration-150">Đăng xuất</button>
+                            {menuOpen ? (
+                                <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                                    <path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" />
+                                </svg>
+                            ) : (
+                                <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                                    <path strokeLinecap="round" strokeLinejoin="round" d="M4 6h16M4 12h16M4 18h16" />
+                                </svg>
+                            )}
+                        </button>
+                    </div>
+                </div>
+
+                {/* Mobile menu */}
+                {menuOpen && (
+                    <div className="md:hidden border-t border-white/20 flex justify-end">
+                        <div className="w-1/3 bg-white shadow-lg rounded-bl-xl py-2 flex flex-col">
+                            {navLinks.map((link) => (
+                                <Link
+                                    key={link.label}
+                                    to={link.to}
+                                    onClick={() => setMenuOpen(false)}
+                                    className="text-sm text-gray-700 font-medium py-2 px-4 hover:bg-blue-50 hover:text-blue-600 transition-colors no-underline"
+                                >
+                                    {link.label}
+                                </Link>
+                            ))}
                         </div>
                     </div>
-                </div> :
-                <div className="flex gap-2 items-center pr-10">
-                    <Link
-                        to={ROUTE_PATH.AUTH.LOGIN}
-                        className="px-3 py-1 text-xs font-semibold bg-white text-blue-600 rounded-full shadow-sm transition-colors duration-200 ease-out hover:bg-gray-200 active:scale-95"
-                    >
-                        Đăng nhập
-                    </Link>
-                    <Link
-                        to={ROUTE_PATH.AUTH.REGISTER}
-                        className="px-3 py-1 text-xs font-medium text-white/90 rounded-full transition-colors duration-200 ease-out hover:bg-white/15 hover:text-white active:scale-95"
-                    >
-                        Đăng ký
-                    </Link>
-                </div>
-            }
-        </nav>
+                )}
+            </nav>
+        </>
     )
 }
 

@@ -1,6 +1,15 @@
-@backend_HostAddress = http://localhost:5165
+@backend_HostAddress = https://localhost:44375
 
 GET {{backend_HostAddress}}/weatherforecast/
 Accept: application/json
+
+###
+
+POST {{backend_HostAddress}}/api/auth/register
+Content-Type: application/json
+
+{
+  //RegisterDTO
+}
 
 ###

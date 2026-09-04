@@ -1,5 +1,6 @@
 
 using backend.Models;
+using backend.Services;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.AspNetCore.Mvc.ModelBinding.Metadata;
 using Microsoft.EntityFrameworkCore;
@@ -32,9 +33,22 @@ builder.Services.AddAuthentication(option =>
             ValidateIssuerSigningKey = true,
             ValidIssuer = builder.Configuration["JWT:Issuer"],
             ValidAudience = builder.Configuration["JWT:Audience"],
-            IssuerSigningKey = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(builder.Configuration["JWT:Key"]))
+            IssuerSigningKey = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(builder.Configuration["JWT:Key"] ?? throw new Exception("thiếu jwt key")))
         };
     });
+
+builder.Services.AddCors(option =>
+{
+    option.AddPolicy("CORS", policy =>
+    {
+        policy.WithOrigins("http://localhost:5173")
+        .AllowAnyHeader()
+        .AllowAnyMethod()
+        .AllowCredentials();
+    });
+});
+
+builder.Services.AddScoped<IJwtTokenService, JwtService>();
 var app = builder.Build();
 
 // Configure the HTTP request pipeline.
@@ -43,9 +57,9 @@ if (app.Environment.IsDevelopment())
     app.MapOpenApi();
 }
 
-
-
 app.UseHttpsRedirection();
+
+app.UseCors("CORS");
 
 app.UseAuthentication();
 
