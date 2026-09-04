@@ -3,6 +3,7 @@ using backend.Models;
 using backend.Services;
 using BCrypt.Net;
 using Microsoft.AspNetCore.Authorization;
+using Microsoft.AspNetCore.Components.Server.ProtectedBrowserStorage;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration.UserSecrets;
@@ -114,15 +115,19 @@ namespace backend.Controllers
 
         [HttpPost("refresh")]
         public async Task<IActionResult> RefreshToken() {
-            var refreshToken = Request.Cookies["refreshToken"];
+            var refreshToken = Request.Cookies["refreshToken"];// lưu refresh ở cookies
+            //check xem có chưa
             if (string.IsNullOrEmpty(refreshToken))
             {
                 return Unauthorized( new { message = "Chưa có refresh token!" } );
             }
+
             var key = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(_configuration["JWT:Key"]!));
+            // tạo đối tượng gom các claims đang có để sử dụng cho request lần này
             ClaimsPrincipal principle;
             try
             {
+                //xác thực  refresh token đó, nếu có thì tạo cái claim principle, không thì sang catch
                 principle = new JwtSecurityTokenHandler().ValidateToken(refreshToken, new TokenValidationParameters
                 {
                     ValidateIssuer = true,
@@ -138,7 +143,7 @@ namespace backend.Controllers
             {
                 return Unauthorized(new{ message = "Refresh token không hợp lệ hoặc hết hạn do " +e.Message});
             }
-
+            // nếu đoạn principle ok thì cấp lại accesstoken mới cho người dùng
             var userId = principle.FindFirst(ClaimTypes.NameIdentifier)?.Value;
             var user = await _workHubContext.Users.FindAsync(userId);
             if(user == null)

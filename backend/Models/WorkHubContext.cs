@@ -26,10 +26,6 @@ public partial class WorkHubContext : DbContext
 
     public virtual DbSet<User> Users { get; set; }
 
-    protected override void OnConfiguring(DbContextOptionsBuilder optionsBuilder)
-#warning To protect potentially sensitive information in your connection string, you should move it out of source code. You can avoid scaffolding the connection string by using the Name= syntax to read it from configuration - see https://go.microsoft.com/fwlink/?linkid=2131148. For more guidance on storing connection strings, see https://go.microsoft.com/fwlink/?LinkId=723263.
-        => optionsBuilder.UseMySql("server=localhost;port=3306;database=WorkHub;user=root;password=123456", Microsoft.EntityFrameworkCore.ServerVersion.Parse("8.0.44-mysql"));
-
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
         modelBuilder
@@ -84,8 +80,6 @@ public partial class WorkHubContext : DbContext
 
             entity.HasIndex(e => e.CompanyName, "companyName").IsUnique();
 
-            entity.HasIndex(e => e.Email, "email").IsUnique();
-
             entity.Property(e => e.UserId)
                 .HasMaxLength(36)
                 .HasColumnName("userId");
@@ -98,9 +92,6 @@ public partial class WorkHubContext : DbContext
             entity.Property(e => e.Description)
                 .HasColumnType("text")
                 .HasColumnName("description");
-            entity.Property(e => e.Email)
-                .HasMaxLength(100)
-                .HasColumnName("email");
             entity.Property(e => e.Field)
                 .HasMaxLength(50)
                 .HasColumnName("field");
@@ -130,8 +121,6 @@ public partial class WorkHubContext : DbContext
 
             entity.ToTable("finderprofile");
 
-            entity.HasIndex(e => e.Email, "email").IsUnique();
-
             entity.Property(e => e.UserId)
                 .HasMaxLength(36)
                 .HasColumnName("userId");
@@ -150,9 +139,6 @@ public partial class WorkHubContext : DbContext
             entity.Property(e => e.EducationLevel)
                 .HasMaxLength(30)
                 .HasColumnName("educationLevel");
-            entity.Property(e => e.Email)
-                .HasMaxLength(100)
-                .HasColumnName("email");
             entity.Property(e => e.Experience)
                 .HasColumnType("text")
                 .HasColumnName("experience");
@@ -236,7 +222,7 @@ public partial class WorkHubContext : DbContext
 
             entity.ToTable("users");
 
-            entity.HasIndex(e => e.Username, "username").IsUnique();
+            entity.HasIndex(e => e.Email, "email").IsUnique();
 
             entity.Property(e => e.UserId)
                 .HasMaxLength(36)
@@ -250,6 +236,9 @@ public partial class WorkHubContext : DbContext
             entity.Property(e => e.Username)
                 .HasMaxLength(50)
                 .HasColumnName("username");
+            entity.Property(e => e.Email)
+            .HasMaxLength(100)
+            .HasColumnName("email");
         });
 
         OnModelCreatingPartial(modelBuilder);
