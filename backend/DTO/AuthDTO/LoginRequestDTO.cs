@@ -2,7 +2,7 @@
 
 namespace backend.DTO
 {
-    public class LoginDTO
+    public class LoginRequestDTO
     {
         [Required(ErrorMessage = "Bạn chưa nhập mật khẩu!")]
         [MinLength(6, ErrorMessage = "Mật khẩu phải có ít nhất 6 ký tự!")]

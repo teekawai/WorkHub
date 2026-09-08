@@ -1,11 +1,15 @@
 
 using backend.Models;
-using backend.Services;
+using backend.Repositories;
+using backend.Services.auth;
+using CloudinaryDotNet;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.AspNetCore.Mvc.ModelBinding.Metadata;
+using Microsoft.AspNetCore.RateLimiting;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.IdentityModel.Tokens;
 using System.Text;
+using System.Threading.RateLimiting;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -48,7 +52,35 @@ builder.Services.AddCors(option =>
     });
 });
 
+
+
+
+
+var cloudName = builder.Configuration["Cloudinary:cloud_name"];
+var apiKey = builder.Configuration["Cloudinary:api_key"];
+var apiSecret = builder.Configuration["Cloudinary:api_secret"];
+
+var cloudinaryAccount = new Account(cloudName, apiKey, apiSecret);
+var cloudinary = new Cloudinary(cloudinaryAccount);
+builder.Services.AddSingleton<ICloudinary>(cloudinary);
+builder.Services.AddScoped<UserRepository>();
+builder.Services.AddScoped<LoginService>();
 builder.Services.AddScoped<IJwtTokenService, JwtService>();
+builder.Services.AddScoped<INewRegisterService, RegisterService>();
+
+//rate limit for auth
+builder.Services.AddRateLimiter(options =>
+{
+    options.AddFixedWindowLimiter("fixed", opt =>
+    {
+        opt.PermitLimit = 3;
+        opt.Window = TimeSpan.FromMinutes(1);
+        opt.QueueProcessingOrder = QueueProcessingOrder.OldestFirst;
+        opt.QueueLimit = 0;
+    });
+    options.RejectionStatusCode = 429;
+});
+
 var app = builder.Build();
 
 // Configure the HTTP request pipeline.
@@ -56,6 +88,11 @@ if (app.Environment.IsDevelopment())
 {
     app.MapOpenApi();
 }
+else
+{
+    app.UseHttpsRedirection();
+}
+app.UseRateLimiter();
 
 app.UseHttpsRedirection();
 
@@ -66,5 +103,6 @@ app.UseAuthentication();
 app.UseAuthorization();
 
 app.MapControllers();
+
 
 app.Run();

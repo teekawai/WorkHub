@@ -3,6 +3,7 @@ using System;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
 using Microsoft.EntityFrameworkCore.Metadata;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 using backend.Models;
 
@@ -11,9 +12,11 @@ using backend.Models;
 namespace backend.Migrations
 {
     [DbContext(typeof(WorkHubContext))]
-    partial class WorkHubContextModelSnapshot : ModelSnapshot
+    [Migration("20260905145247_PasswordNullable")]
+    partial class PasswordNullable
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        /// <inheritdoc />
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder
@@ -282,32 +285,6 @@ namespace backend.Migrations
                     b.ToTable("job", (string)null);
                 });
 
-            modelBuilder.Entity("backend.Models.RefreshToken", b =>
-                {
-                    b.Property<string>("UserId")
-                        .HasMaxLength(36)
-                        .HasColumnType("varchar(36)")
-                        .HasColumnName("userId");
-
-                    b.Property<DateTime>("ExpireAt")
-                        .HasColumnType("datetime")
-                        .HasColumnName("expireAt");
-
-                    b.Property<bool>("IsRevoked")
-                        .HasColumnType("tinyint(1)")
-                        .HasColumnName("isRevoked");
-
-                    b.Property<string>("Token")
-                        .IsRequired()
-                        .HasColumnType("text")
-                        .HasColumnName("token");
-
-                    b.HasKey("UserId")
-                        .HasName("PRIMARY");
-
-                    b.ToTable("refreshToken", (string)null);
-                });
-
             modelBuilder.Entity("backend.Models.User", b =>
                 {
                     b.Property<string>("UserId")
@@ -342,9 +319,6 @@ namespace backend.Migrations
                         .HasName("PRIMARY");
 
                     b.HasIndex(new[] { "Email" }, "email")
-                        .IsUnique();
-
-                    b.HasIndex(new[] { "UserId" }, "userId")
                         .IsUnique();
 
                     b.ToTable("users", (string)null);
@@ -400,18 +374,6 @@ namespace backend.Migrations
                         .HasConstraintName("fk_job_employer");
 
                     b.Navigation("Employer");
-                });
-
-            modelBuilder.Entity("backend.Models.RefreshToken", b =>
-                {
-                    b.HasOne("backend.Models.User", "User")
-                        .WithMany()
-                        .HasForeignKey("UserId")
-                        .OnDelete(DeleteBehavior.Cascade)
-                        .IsRequired()
-                        .HasConstraintName("fk_refreshtoken_user");
-
-                    b.Navigation("User");
                 });
 
             modelBuilder.Entity("backend.Models.Employerprofile", b =>
