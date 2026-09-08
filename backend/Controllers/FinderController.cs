@@ -5,16 +5,18 @@ using CloudinaryDotNet.Actions;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
+using System.Runtime.CompilerServices;
 using System.Security.Claims;
-using System.Security.Cryptography.X509Certificates;
-using static System.Runtime.InteropServices.JavaScript.JSType;
+
+using System.Text;
+
 
 namespace backend.Controllers
 {
     [ApiController]
     [Route("api/finders")]
     [Authorize(Roles = "finder")]
-    public class FinderController : Controller
+    public class FinderController : ControllerBase
     {
         //dependency injection
         private readonly WorkHubContext _context;
@@ -24,16 +26,15 @@ namespace backend.Controllers
             this._context = _context;
             this._cloudinary = _cloudinary;
         }
+
         
 
         [HttpGet("me")]
 
         public async Task<IActionResult> FinderProfile()
         {
-            //claim này đã được nhúng trong JwtService rồi
-            string currentUserId = User.FindFirst(ClaimTypes.NameIdentifier)?.Value; // cái này là lấy UserId từ Jwt token, nếu muốn lấy role thì thay nameIdentifier thành roles là được
-
-            var profile = await _context.Finderprofiles.FindAsync(currentUserId);
+            string currentUserId = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
+            var profile = await _context.Finderprofiles.AsNoTracking().FirstOrDefaultAsync(u => u.UserId == currentUserId); // cái này là lấy UserId từ Jwt token, nếu muốn lấy role thì thay nameIdentifier thành roles là được
             if (profile == null)
             {
                 return NotFound("Chưa có hồ sơ");
@@ -47,6 +48,7 @@ namespace backend.Controllers
                 Address = profile.Address,
                 EducationLevel = profile.EducationLevel,
                 Experience = profile.Experience,
+                Cv = profile.Cv,
                 LinkedIn = profile.LinkedIn,
                 Major = profile.Major,
                 Skill = profile.Skill,
@@ -58,13 +60,9 @@ namespace backend.Controllers
         [HttpPut("me")]
         public async Task<IActionResult> UpdateFinderProfile(FinderProfileRequestDTO dto)
         {
-            string currentUserId = User.FindFirst(ClaimTypes.NameIdentifier)?.Value; // cái này là lấy UserId từ Jwt token, nếu muốn lấy role thì thay nameIdentifier thành roles là được
-            if (currentUserId == null)
-            {
-                return Unauthorized("Người dùng chưa đăng nhập");
-
-            }
-            var profile = await _context.Finderprofiles.FindAsync(currentUserId);
+            string currentUserId = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
+            var profile = await _context.Finderprofiles.FirstOrDefaultAsync(u => u.UserId == currentUserId); // cái này là lấy UserId từ Jwt token, nếu muốn lấy role thì thay nameIdentifier thành roles là được
+            
             if (profile == null)
             {
                 profile = new Finderprofile
@@ -81,7 +79,7 @@ namespace backend.Controllers
                     Skill = dto.Skill,
                 };
                 _context.Add(profile);
-                await _context.SaveChangesAsync();
+                
             }
             else
             {
@@ -94,26 +92,24 @@ namespace backend.Controllers
                 profile.LinkedIn = dto.LinkedIn;
                 profile.Major = dto.Major;
                 profile.Skill = dto.Skill;
-
-                await _context.SaveChangesAsync();
             }
-            return Ok("Đã cập nhật thành profile thành công");
+            await _context.SaveChangesAsync();
+            return Ok(profile);
         }
 
         [HttpPost("me/avatar")]
         public async Task<IActionResult> UploadAvatar(IFormFile avatar)
         {
-            string currentUserId = User.FindFirst(ClaimTypes.NameIdentifier)?.Value; // cái này là lấy UserId từ Jwt token, nếu muốn lấy role thì thay nameIdentifier thành roles là được
-            if (currentUserId == null)
+            string currentUserId = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
+            var profile = await _context.Finderprofiles.FirstOrDefaultAsync(u => u.UserId == currentUserId); // cái này là lấy UserId từ Jwt token, nếu muốn lấy role thì thay nameIdentifier thành roles là được
+            if (profile == null)
             {
-                return Unauthorized("Người dùng chưa đăng nhập");
-
+                return NotFound("Chưa có hồ sơ");
             }
-            var profile = await _context.Finderprofiles.FindAsync(currentUserId);
-            
+
             // validate
             if (avatar == null || avatar.Length == 0) return BadRequest("Chưa có ảnh đại diện!");
-            if (avatar.Length > 5 *1024 * 1024) return BadRequest("Dung lượng ảnh quá lớn!");
+            if (avatar.Length > 2 *1024 * 1024) return BadRequest("Dung lượng ảnh quá lớn!");
 
             var avtExtension = Path.GetExtension(avatar.FileName).ToLower();//lấy định dạng ảnh
             if (avtExtension != ".jpg" && avtExtension != ".png") return BadRequest("Sai định dạng ảnh");
@@ -135,22 +131,21 @@ namespace backend.Controllers
         }
 
         [HttpPost("me/cv")]
-        public async Task<IActionResult> UploadCV(IFormFile cv)
+        public async Task<IActionResult> UploadCV([FromForm]IFormFile cv)
         {
-            string currentUserId = User.FindFirst(ClaimTypes.NameIdentifier)?.Value; // cái này là lấy UserId từ Jwt token, nếu muốn lấy role thì thay nameIdentifier thành roles là được
-            if (currentUserId == null)
+            string currentUserId = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
+            var profile = await _context.Finderprofiles.FirstOrDefaultAsync(u => u.UserId == currentUserId); // cái này là lấy UserId từ Jwt token, nếu muốn lấy role thì thay nameIdentifier thành roles là được
+            if (profile == null)
             {
-                return Unauthorized("Người dùng chưa đăng nhập");
-
+                return NotFound("Chưa có hồ sơ");
             }
-            var profile = await _context.Finderprofiles.FindAsync(currentUserId);
-            
+
             // validate
-            if (cv == null || cv.Length == 0) return BadRequest("Chưa có ảnh đại diện!");
-            if (cv.Length > 5 * 1024 * 1024) return BadRequest("Dung lượng ảnh quá lớn!");
+            if (cv == null || cv.Length == 0) return BadRequest("Chưa có CV!");
+            if (cv.Length > 5 * 1024 * 1024) return BadRequest("Dung lượng file quá lớn!");
 
             var cvExtension = Path.GetExtension(cv.FileName).ToLower();//lấy định dạng cv
-            if (cvExtension != ".doc" && cvExtension != ".pdf") return BadRequest("CV phải gửi file .doc hoặc .pdf");
+            if (cvExtension != ".docx" && cvExtension != ".pdf") return BadRequest("CV phải gửi file .docx hoặc .pdf");
 
             using var stream = cv.OpenReadStream();// cloudinary không lấy thằng dữ liệu dạng iformfile được mà phải chuyển sang dạng stream(claude)
             var uploadParam = new RawUploadParams
