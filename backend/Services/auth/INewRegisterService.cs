@@ -22,7 +22,7 @@ namespace backend.Services.auth
         public bool isSuccess {  get; set; }
         public ErrorCode code { get; set; }
         public string? message { get; set; }
-        public User data { get; set; }
+        public User? data { get; set; }
     }
 
     public class RegisterService : INewRegisterService
