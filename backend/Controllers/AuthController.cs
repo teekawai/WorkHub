@@ -124,11 +124,12 @@ namespace backend.Controllers
                 Email = user.Email,
                 Role = user.Role,
             });
-
         }
+
         [HttpPost("login")]
         public async Task<IActionResult> Login(LoginRequestDTO dto)
         {
+            
             if (dto == null)
             {
                 return BadRequest("Dữ liệu không hợp lệ");
@@ -139,6 +140,10 @@ namespace backend.Controllers
             if (result == null)
             {
                 return Unauthorized("Tài khoản hoặc mật khẩu không đúng!");
+            }
+            var existRefreshToken = await _workHubContext.RefreshTokens.FirstOrDefaultAsync(token => token.UserId == result.UserId);
+            if (existRefreshToken !=null) {
+                result.refreshToken = existRefreshToken;
             }
             //nếu được thì add vào db
             _workHubContext.RefreshTokens.Add(result.refreshToken);
