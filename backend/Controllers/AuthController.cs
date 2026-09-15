@@ -32,15 +32,16 @@ namespace backend.Controllers
     public class AuthController : ControllerBase
     {
         private readonly WorkHubContext _workHubContext;
-        private IConfiguration _configuration;
-        private IJwtTokenService _jwtTokenService;
-        private UserRepository _userRepo;
-        private LoginService _loginService;
-        private INewRegisterService _registerService;
+        private readonly IConfiguration _configuration;
+        private readonly IJwtTokenService _jwtTokenService;
+        private readonly UserRepository _userRepo;
+        private readonly LoginService _loginService;
+        private readonly INewRegisterService _registerService;
+        private readonly ITokenValidate _refTokenService;
 
         public AuthController(WorkHubContext context, IConfiguration _configuration, 
             IJwtTokenService _jwtTokenService, UserRepository _repo, 
-            LoginService _loginService, INewRegisterService _registerService)
+            LoginService _loginService, INewRegisterService _registerService, ITokenValidate refTokenService)
         {
             this._workHubContext = context;
             this._configuration = _configuration;
@@ -48,6 +49,7 @@ namespace backend.Controllers
             this._userRepo = _repo;
             this._loginService = _loginService;
             this._registerService = _registerService;
+            this._refTokenService = refTokenService;
         }
 
         [HttpPost("register")]
@@ -63,6 +65,7 @@ namespace backend.Controllers
                 ErrorCode.NotFound => NotFound(new {message = user.message}),
                 ErrorCode.Conflict => Conflict(new {message = user.message}),
                 ErrorCode.BadRequest => BadRequest(new {message = user.message}),
+                _ => StatusCode(500, new { message = "Lỗi không xác định" })
             };
         }
 
@@ -96,17 +99,10 @@ namespace backend.Controllers
                 _workHubContext.Add(user);
                 await _workHubContext.SaveChangesAsync();
             }
-            
-                var accessToken = _jwtTokenService.JwtToken(user: user, isAccessToken: true, expire: 15);
-                var refreshToken = new RefreshToken
-                {
-                    Token = _jwtTokenService.JwtToken(user: user, isAccessToken: false, expire: rememberMe ? 60 * 24 * 30 : 15),
-                    UserId = user.UserId,
-                    ExpireAt = rememberMe != false ? DateTime.UtcNow.AddDays(30) : DateTime.UtcNow.AddDays(1),
-                    IsRevoked = false,
-                };
 
-                _workHubContext.RefreshTokens.Add(refreshToken);
+            var (accessToken, refreshToken) = _jwtTokenService.NewToken(user, rememberMe);
+
+            _workHubContext.RefreshTokens.Add(refreshToken);
                 await _workHubContext.SaveChangesAsync();
                 
                 //cho refresh token trả về dưới dạng httponly cookie(nhằm tránh js đọc được, không bị kẻ khác tấn công)
@@ -127,30 +123,23 @@ namespace backend.Controllers
         }
 
         [HttpPost("login")]
+        [EnableRateLimiting("fixed")]
         public async Task<IActionResult> Login(LoginRequestDTO dto)
         {
+            var result = await _loginService.LoginResult(dto);
             
-            if (dto == null)
+            //check có dữ liệu user được trả về kh, kh thì lỗi, có thì lưu refreshToken vào cookies
+            if(result.status != ErrorStatus.Success)
             {
-                return BadRequest("Dữ liệu không hợp lệ");
+                return result.status switch
+                {
+                    ErrorStatus.Unauthorized => Unauthorized(new { msg = result.message }),
+                    _ => StatusCode(500, new { message = "Lỗi không xác định" })
+                };
             }
 
-            var result =await _loginService.LoginResult(dto);
-            //validate dữ liệu nhập
-            if (result == null)
-            {
-                return Unauthorized("Tài khoản hoặc mật khẩu không đúng!");
-            }
-            var existRefreshToken = await _workHubContext.RefreshTokens.FirstOrDefaultAsync(token => token.UserId == result.UserId);
-            if (existRefreshToken !=null) {
-                result.refreshToken = existRefreshToken;
-            }
-            //nếu được thì add vào db
-            _workHubContext.RefreshTokens.Add(result.refreshToken);
-            await _workHubContext.SaveChangesAsync();
-
-            //cho refresh token trả về dưới dạng httponly cookie(nhằm tránh js đọc được, không bị kẻ khác tấn công)
-            Response.Cookies.Append("refreshToken", result.refreshToken.Token, new CookieOptions
+            //cho refresh token trả về dưới dạng httponly cookie
+            Response.Cookies.Append("refreshToken", result.data.refreshToken.Token, new CookieOptions
             {
                 HttpOnly = true, //chỉ http thôi, tránh js đọc được
                 Secure = true, // chỉ gửi qua giao thức https, không gửi qua http
@@ -158,61 +147,16 @@ namespace backend.Controllers
                 Expires = dto.rememberMe ? DateTime.UtcNow.AddDays(30) : (DateTimeOffset?)null //nếu có rememberme thì lưu refresh token lại trong 30 ngày, không thì sẽ hết hiệu lực khi đóng browser
             });
             //return dữ liệu vào local
-            return Ok(new
-            {
-                accessToken = result.accessToken,
-                UserId = result.UserId,
-                Email = result.Email,
-                Role = result.Role,
-            });
+            return Ok (new { result.data.accessToken, result.data.Email, result.data.UserId, result.data.Role});
         }
 
         [HttpPost("refresh")]
         public async Task<IActionResult> RefreshToken()
         {
-            var refreshToken = Request.Cookies["refreshToken"];// lưu refresh ở cookies
-                                                               //check xem có chưa
-            if (string.IsNullOrEmpty(refreshToken))
-            {
-                return Unauthorized(new { message = "Chưa có refresh token!" });
-            }
-            var existToken = await _workHubContext.RefreshTokens.FirstOrDefaultAsync(t => t.Token == refreshToken);
-            if (existToken == null) {
-                return Unauthorized("Không thấy refresh Token!");
-            }
-            if (existToken.IsRevoked)
-            {
-                return Unauthorized("Hết hạn!");
-            }
-            if (existToken.ExpireAt <= DateTime.UtcNow)
-            {
-                return Unauthorized("Hết hạn");
-            }
-
-            var key = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(_configuration["JWT:Key"]!));
-            // tạo đối tượng gom các claims đang có để sử dụng cho request lần này
-            ClaimsPrincipal principle;
-            try
-            {
-                //xác thực  refresh token đó, nếu có thì tạo cái claim principle, không thì sang catch
-                principle = new JwtSecurityTokenHandler().ValidateToken(refreshToken, new TokenValidationParameters
-                {
-                    ValidateIssuer = true,
-                    ValidIssuer = _configuration["JWT:Issuer"],
-                    ValidateAudience = true,
-                    ValidAudience = _configuration["JWT:Audience"],
-                    ValidateIssuerSigningKey = true,
-                    IssuerSigningKey = key,
-                    ValidateLifetime = true
-
-                }, out _);
-            }
-            catch (Exception e)
-            {
-                return Unauthorized(new { message = "Refresh token không hợp lệ hoặc hết hạn do " + e.Message });
-            }
+            var refreshToken = Request.Cookies["refreshToken"];
+            var principle = await _refTokenService.ValidateToken(refreshToken);
             // nếu đoạn principle ok thì cấp lại accesstoken mới cho người dùng
-            var userId = principle.FindFirst(ClaimTypes.NameIdentifier)?.Value;
+            var userId = principle.principle.FindFirst(ClaimTypes.NameIdentifier)?.Value;
             var user = await _workHubContext.Users.FindAsync(userId);
             if (user == null)
             {
