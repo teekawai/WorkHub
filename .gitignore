@@ -482,3 +482,8 @@ $RECYCLE.BIN/
 *.swp
 backend/appsettings.json
 postman/
+PLAN.md
+PROJECT.md
+*.md
+
+

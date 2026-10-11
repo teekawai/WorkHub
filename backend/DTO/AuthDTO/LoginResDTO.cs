@@ -7,7 +7,7 @@ namespace backend.DTO.AuthDTO
     {
 
         public string accessToken { get; set; } = null!;
-        public RefreshToken refreshToken { get; set; } = null!;
+        public string refreshToken { get; set; } = null!;
         
         public string UserId { get; set; } =null!;
         public string Email { get; set; } = null!;

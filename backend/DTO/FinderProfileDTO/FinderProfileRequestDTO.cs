@@ -1,16 +1,14 @@
 ﻿using System.ComponentModel.DataAnnotations;
 
-namespace backend.DTO
+namespace backend.DTO.FinderProfileDTO
 {
-    public class FinderProfileResponseDTO
+    public class FinderProfileRequestDTO
     {
-        [Required(ErrorMessage ="Không bỏ trống!")]
+        [Required(ErrorMessage = "Không bỏ trống!")]
         public string Fullname { get; set; } = null!;
 
         [Required(ErrorMessage = "Không bỏ trống!")]
         public string Phone { get; set; } = null!;
-
-        public string? Avatar { get; set; }
 
         public string? Description { get; set; }
 
@@ -19,8 +17,6 @@ namespace backend.DTO
         public string? EducationLevel { get; set; }
 
         public string? Experience { get; set; }
-
-        public string? Cv { get; set; }
 
         public string? LinkedIn { get; set; }
 

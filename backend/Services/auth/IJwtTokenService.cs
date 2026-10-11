@@ -9,6 +9,7 @@ namespace backend.Services.auth
     public interface IJwtTokenService
     {
         public string JwtToken(User user, bool isAccessToken, int expire);
+        public (string accessToken, string refreshToken) NewToken(User user, bool rememberMe);
     }
 
     public class JwtService : IJwtTokenService
@@ -18,6 +19,14 @@ namespace backend.Services.auth
         public JwtService(IConfiguration _configuration)
         {
             this._configuration = _configuration;
+        }
+
+        //tạo refresh token và access token
+        public (string accessToken, string refreshToken) NewToken(User user, bool rememberMe)
+        {
+            string accessToken = JwtToken(user: user, isAccessToken: true, expire: 15);
+            string refreshToken = JwtToken(user: user, isAccessToken: false, expire: rememberMe ? 60 * 24 * 30 : 15);
+            return (accessToken, refreshToken);
         }
 
         public string JwtToken(User user, bool isAccessToken, int expire) 
@@ -41,7 +50,7 @@ namespace backend.Services.auth
             );
             return new JwtSecurityTokenHandler().WriteToken(token);
         }
-
+        
         
     }
 }
