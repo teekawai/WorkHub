@@ -1,6 +1,8 @@
 ﻿using backend.Models;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.EntityFrameworkCore.Storage;
 using Microsoft.IdentityModel.Tokens;
+using StackExchange.Redis;
 using System.IdentityModel.Tokens.Jwt;
 using System.Security.Claims;
 using System.Text;
@@ -12,7 +14,7 @@ namespace backend.Services.auth
         public Task<RefTokenResult> ValidateToken(string token);
     }
 
-    public enum StatusCode { Unauthorized, Success};
+    public enum StatusCode { Unauthorized, Success };
     public class RefTokenResult
     {
         public ClaimsPrincipal? principle;
@@ -24,47 +26,23 @@ namespace backend.Services.auth
     {
         private readonly WorkHubContext _context;
         private readonly IConfiguration _configuration;
-        private readonly IHttpContextAccessor _contextAccessor;
-        public RefreshTokenValidate(WorkHubContext context, IConfiguration configuration, IHttpContextAccessor contextAccessor)
-        {
-            _context = context;
-            _configuration = configuration;
-            _contextAccessor = contextAccessor;
+        private readonly StackExchange.Redis.IDatabase _redis;
 
+        public RefreshTokenValidate(WorkHubContext context, IConfiguration configuration, IConnectionMultiplexer _redis)
+        {
+            this._context = context;
+            this._configuration = configuration;
+            this._redis = _redis.GetDatabase();
         }
 
         public async Task<RefTokenResult> ValidateToken(string refreshToken)
         {
             if (string.IsNullOrEmpty(refreshToken))
             {
-                return (new RefTokenResult { 
-                    code = StatusCode.Unauthorized,
-                    message = "Chưa có refresh token!" 
-                });
-            }
-            var existToken = await _context.RefreshTokens.FirstOrDefaultAsync(t => t.Token == refreshToken);
-            if (existToken == null)
-            {
                 return (new RefTokenResult
                 {
                     code = StatusCode.Unauthorized,
                     message = "Chưa có refresh token!"
-                }); 
-            }
-            if (existToken.IsRevoked)
-            {
-                return (new RefTokenResult
-                {
-                    code = StatusCode.Unauthorized,
-                    message = "Hết hạn!"
-                });
-            }
-            if (existToken.ExpireAt <= DateTime.UtcNow)
-            {
-                return (new RefTokenResult
-                {
-                    code = StatusCode.Unauthorized,
-                    message = "Hết hạn!"
                 });
             }
 
@@ -92,6 +70,17 @@ namespace backend.Services.auth
                 {
                     code = StatusCode.Unauthorized,
                     message = "RefreshToken không hợp lệ hoặc có lỗi trong quá trình xử lí: " + e.Message
+                });
+            }
+            var userId = principle.FindFirst(ClaimTypes.NameIdentifier)?.Value;
+            var token = await _redis.StringGetAsync($"refresh:{userId}");//thay thành getString từ redis
+            //check xem có trong server redis không
+            if (token.HasValue || token != refreshToken)
+            {
+                return (new RefTokenResult
+                {
+                    code = StatusCode.Unauthorized,
+                    message = "Token không hợp lệ"
                 });
             }
             return (new RefTokenResult

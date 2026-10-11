@@ -8,6 +8,7 @@ using Microsoft.EntityFrameworkCore;
 using Microsoft.IdentityModel.Tokens;
 using System.Text;
 using System.Threading.RateLimiting;
+using StackExchange.Redis;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -51,6 +52,7 @@ builder.Services.AddCors(option =>
 var cloudName = builder.Configuration["Cloudinary:cloud_name"];
 var apiKey = builder.Configuration["Cloudinary:api_key"];
 var apiSecret = builder.Configuration["Cloudinary:api_secret"];
+var redisConnectionString = builder.Configuration["Redis:ConnectionString"];
 
 var cloudinaryAccount = new Account(cloudName, apiKey, apiSecret);
 var cloudinary = new Cloudinary(cloudinaryAccount);
@@ -61,6 +63,10 @@ builder.Services.AddScoped<IJwtTokenService, JwtService>();
 builder.Services.AddScoped<INewRegisterService, RegisterService>();
 builder.Services.AddScoped<ITokenValidate, RefreshTokenValidate>();
 builder.Services.AddHttpContextAccessor();
+builder.Services.AddSingleton<IConnectionMultiplexer>(
+    ConnectionMultiplexer.Connect(redisConnectionString)
+);
+
 // Rate limit for auth
 builder.Services.AddRateLimiter(options =>
 {

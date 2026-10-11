@@ -1,7 +1,7 @@
 # WorkHub — Kế hoạch triển khai (90h)
 
 ## Current Task
-- Module 1 đã xong TOÀN BỘ (BE + FE, kể cả response interceptor tự refresh token). Tiếp theo: FE Home page (Finder/Employer) — sẽ gắn ProtectedRoute + Navbar vào Layout chung tại đây, sau đó chuyển sang Module 2 (Profile).
+- Module 2 BE xong: FinderController + EmployerController (GET/PUT /me + upload logo/avatar/CV via Cloudinary). Tiếp theo: FE trang Profile Finder + Employer (xem + sửa + upload).
 
 ## Lưu ý
 - Xong task nào thì gạch ngang task đó (dùng `~~text~~` trong markdown) — không xóa, để tracking tiến độ
@@ -27,11 +27,11 @@
 - [x] ~~FE: Lưu accessToken, gọi API kèm Authorization header — 2h~~ (axios instance `instance.js` + request interceptor gắn Bearer token tự động — auth.js đã chuyển qua dùng instance này)
 - [x] ~~FE: Layout chung (Navbar theo role, route bảo vệ) — 1h~~ (NavBar.jsx xong: hiện theo role, dropdown Chào + Hồ sơ + Đăng xuất; ProtectedRoute.jsx code xong nhưng CHƯA gắn vào route nào — sẽ gắn khi làm Home/trang cần login)
 - [x] ~~FE: Response interceptor tự gọi /auth/refresh khi 401, retry request cũ — 1.5h~~ (instance.js: bắt 401 → gọi refreshToken() → cập nhật accessToken vào currentUser + localStorage → gắn lại header cho error.config → retry đúng request cũ qua instance(error.config); có cờ _retry chặn lặp vô hạn; refresh fail → xóa currentUser + redirect /login)
-- [ ] FE: Trang Home Finder + Employer, gắn Navbar + ProtectedRoute vào Layout chung, thêm route thật trong App.jsx (/finder/home, /employer/home) — 2h (task mới, chưa có trong plan gốc — cần làm trước khi qua Module 2 vì Navbar/ProtectedRoute đang code sẵn nhưng chưa có trang nào dùng thật)
+- [x] ~~FE: Trang Home Finder + Employer, gắn Navbar + ProtectedRoute vào Layout chung, thêm route thật trong App.jsx (/finder/home, /employer/home) — 2h~~ (ProtectedRoute đã gắn vào App.jsx cho cả Finder lẫn Employer; bug logic Redis check `&&` → `||` đã fix)
 
 ## Module 2 — Profile (~15h)
-- [ ] BE: FinderController + EmployerController (GET/PUT /me) — 5h
-- [ ] BE: Setup Cloudinary, upload avatar/logo/CV — 5h
+- [x] ~~BE: FinderController + EmployerController (GET/PUT /me) — 5h~~
+- [x] ~~BE: Setup Cloudinary, upload avatar/logo/CV — 5h~~
 - [ ] BE: Test profile APIs — 1h
 - [ ] FE: Trang Profile Finder/Employer (xem + sửa) — 3h
 - [ ] FE: Upload avatar/logo/CV — 1h
