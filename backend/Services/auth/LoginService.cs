@@ -3,10 +3,11 @@ using backend.DTO.AuthDTO;
 using backend.Models;
 using backend.Repositories;
 using Microsoft.EntityFrameworkCore;
+using StackExchange.Redis;
 
 namespace backend.Services.auth
 {
-    public enum ErrorStatus { Unauthorized, Success }
+    public enum ErrorStatus { Unauthorized, RedisServerDown, Success }
     //để hiện kết quả trả về của quá trình login 
     public class ResultStatus
     {
@@ -20,16 +21,23 @@ namespace backend.Services.auth
         private readonly UserRepository _repo;
         private readonly WorkHubContext _context;
         private readonly IJwtTokenService _jwtTokenService;
-        public LoginService(UserRepository _repo, IJwtTokenService _jwtTokenService, WorkHubContext _context)
+        private readonly IDatabase _redis;
+        public LoginService(UserRepository _repo, IJwtTokenService _jwtTokenService, WorkHubContext _context, IConnectionMultiplexer _redis)
         {
             this._repo = _repo;
             this._jwtTokenService = _jwtTokenService;
             this._context = _context;
+            this._redis = _redis.GetDatabase();
         }
 
         public async Task<ResultStatus> LoginResult(LoginRequestDTO dto)
         {
+            var sw = System.Diagnostics.Stopwatch.StartNew();
             var user = await _repo.GetUserByEmail(dto.Email);
+            Console.WriteLine($"GetUser: {sw.ElapsedMilliseconds}ms");
+
+            // check password...
+            Console.WriteLine($"BCrypt: {sw.ElapsedMilliseconds}ms");
             if (user == null)
             {
                 return new ResultStatus
@@ -48,42 +56,36 @@ namespace backend.Services.auth
             }
 
             var (accessToken, refreshToken) = _jwtTokenService.NewToken(user, dto.rememberMe);
-
-            // Upsert: tìm theo UserId (primary key của bảng refreshToken)
-            // Nếu user đã login trước đó → update token cũ thay vì insert mới
-            var existRefreshToken = await _context.RefreshTokens
-                .FirstOrDefaultAsync(r => r.UserId == user.UserId);
-
-            if (existRefreshToken != null)
+            try
             {
-                // Cập nhật token cũ
-                existRefreshToken.Token = refreshToken.Token;
-                existRefreshToken.ExpireAt = refreshToken.ExpireAt;
-                existRefreshToken.IsRevoked = false;
+                var ttl = dto.rememberMe ? TimeSpan.FromDays(15) : TimeSpan.FromMinutes(15);
+                await _redis.StringSetAsync($"refresh:{user.UserId}", refreshToken, ttl);
+                Console.WriteLine($"NewToken: {sw.ElapsedMilliseconds}ms");
+                Console.WriteLine($"Redis SET: {sw.ElapsedMilliseconds}ms");
+                var currentUser = new LoginResDTO
+                {
+                    UserId = user.UserId,
+                    Email = user.Email,
+                    accessToken = accessToken,
+                    refreshToken = refreshToken,
+                    Role = user.Role
+                };
+
+                return new ResultStatus
+                {
+                    status = ErrorStatus.Success,
+                    message = "Đăng nhập thành công",
+                    data = currentUser
+                };
+            } catch (RedisConnectionException ex)
+            {
+                return new ResultStatus
+                {
+                    status = ErrorStatus.RedisServerDown,
+                    message = ex.Message
+                };
             }
-            else
-            {
-                // Lần đầu login → insert mới
-                _context.RefreshTokens.Add(refreshToken);
-            }
-
-            await _context.SaveChangesAsync();
-
-            var currentUser = new LoginResDTO
-            {
-                UserId = user.UserId,
-                Email = user.Email,
-                accessToken = accessToken,
-                refreshToken = existRefreshToken ?? refreshToken,
-                Role = user.Role
-            };
-
-            return new ResultStatus
-            {
-                status = ErrorStatus.Success,
-                message = "Đăng nhập thành công",
-                data = currentUser
-            };
+            
         }
     }
 }

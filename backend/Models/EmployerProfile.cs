@@ -25,6 +25,7 @@ public partial class Employerprofile
 
     public string TaxCode { get; set; } = null!;
 
+
     public virtual ICollection<Job> Jobs { get; set; } = new List<Job>();
 
     public virtual User User { get; set; } = null!;
