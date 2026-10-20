@@ -1,8 +1,8 @@
 ﻿using backend.DTO;
 using backend.DTO.FinderProfileDTO;
 using backend.Models;
-using CloudinaryDotNet;
-using CloudinaryDotNet.Actions;
+using backend.Services.files;
+using Microsoft.AspNetCore.RateLimiting;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
@@ -15,24 +15,25 @@ using System.Text;
 namespace backend.Controllers
 {
     [ApiController]
-    [Route("api/finders")]
+    [Route("api/finders/")]
     [Authorize(Roles = "finder")]
     public class FinderController : ControllerBase
     {
         //dependency injection
         private readonly WorkHubContext _context;
-        private readonly ICloudinary _cloudinary;
+        private readonly IFileUploadService _fileUploadService;
         
-        public FinderController(WorkHubContext _context, ICloudinary _cloudinary)
+        public FinderController(WorkHubContext _context, IFileUploadService fileUploadService)
         {
             this._context = _context;
-            this._cloudinary = _cloudinary;
+            this._fileUploadService = fileUploadService;
         }
 
         private string getUserId()
         {
             return User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
         }
+        
         [HttpGet("me")]
 
         public async Task<IActionResult> FinderProfile()
@@ -62,6 +63,7 @@ namespace backend.Controllers
         }
 
         [HttpPut("me")]
+        [EnableRateLimiting("upload_cv_avt")]
         public async Task<IActionResult> UpdateFinderProfile(FinderProfileRequestDTO dto)
         {
             string currentUserId = getUserId();
@@ -83,7 +85,6 @@ namespace backend.Controllers
                     Skill = dto.Skill,
                 };
                 _context.Add(profile);
-                
             }
             else
             {
@@ -102,73 +103,50 @@ namespace backend.Controllers
         }
 
         [HttpPost("me/avatar")]
+        [EnableRateLimiting("upload_cv_avt")]
         public async Task<IActionResult> UploadAvatar(IFormFile avatar)
         {
             string currentUserId = getUserId();
-            var profile = await _context.Finderprofiles.FirstOrDefaultAsync(u => u.UserId == currentUserId); // cái này là lấy UserId từ Jwt token, nếu muốn lấy role thì thay nameIdentifier thành roles là được
+            var profile = await _context.Finderprofiles.Include(p => p.User).FirstOrDefaultAsync(u => u.UserId == currentUserId); // cái này là lấy UserId từ Jwt token, nếu muốn lấy role thì thay nameIdentifier thành roles là được
             if (profile == null)
             {
                 return NotFound("Chưa có hồ sơ");
             }
+            string avatarFolder = $"WorkHub/finder/avatar/{profile.UserId}";
+            string avatarPublicId = $"{avatarFolder}/{profile.User.Username}_Avatar"; //cố định theo user -> upload sau sẽ ghi đè đúng file này, không tạo file mới
 
-            // validate
-            if (avatar == null || avatar.Length == 0) return BadRequest("Chưa có ảnh đại diện!");
-            if (avatar.Length > 2 *1024 * 1024) return BadRequest("Dung lượng ảnh quá lớn!");
-
-            var avtExtension = Path.GetExtension(avatar.FileName).ToLower();//lấy định dạng ảnh
-            if (avtExtension != ".jpg" && avtExtension != ".png") return BadRequest("Sai định dạng ảnh");
-
-            using var stream = avatar.OpenReadStream();// cloudinary không lấy thằng dữ liệu dạng iformfile được mà phải chuyển sang dạng stream(claude)
-            var uploadParam = new ImageUploadParams
+            var result = await _fileUploadService.Upload_CV_AVT(avatar, avatarFolder, avatarPublicId, new[] { ".jpg", ".png" }, 2 * 1024 * 1024);
+            if (!result.IsSuccess)
             {
-                File = new FileDescription(avatar.FileName, stream),
-                Folder = "WorkHub/finder/avatar"
-
-            };
-
-            var uploadResult = await _cloudinary.UploadAsync(uploadParam);
-            if (uploadResult.Error != null)
-            {
-                return BadRequest("Lưu avatar không thành công");
+                return BadRequest(result.ErrorMessage);
             }
-            var url = uploadResult.SecureUrl.ToString();
 
-            profile.Avatar = url;
+            profile.Avatar = result.Url;
             await _context.SaveChangesAsync();
-            return Ok(url);
+            return Ok(result.Url);
         }
 
         [HttpPost("me/cv")]
         public async Task<IActionResult> UploadCV([FromForm]IFormFile cv)
         {
             string currentUserId = getUserId();
-            var profile = await _context.Finderprofiles.FirstOrDefaultAsync(u => u.UserId == currentUserId); // cái này là lấy UserId từ Jwt token, nếu muốn lấy role thì thay nameIdentifier thành roles là được
+            var profile = await _context.Finderprofiles.Include(p => p.User).FirstOrDefaultAsync(u => u.UserId == currentUserId); // cái này là lấy UserId từ Jwt token, nếu muốn lấy role thì thay nameIdentifier thành roles là được
             if (profile == null)
             {
                 return NotFound("Chưa có hồ sơ");
             }
+            string CVfolder = $"WorkHub/finder/cv/{profile.UserId}";
+            string CVpublicId = $"{CVfolder}/{profile.User.Username}_CV"; //cố định theo user -> upload sau sẽ ghi đè đúng file này, không tạo file mới
 
-            // validate
-            if (cv == null || cv.Length == 0) return BadRequest("Chưa có CV!");
-            if (cv.Length > 5 * 1024 * 1024) return BadRequest("Dung lượng file quá lớn!");
-
-            var cvExtension = Path.GetExtension(cv.FileName).ToLower();//lấy định dạng cv
-            if (cvExtension != ".docx" && cvExtension != ".pdf") return BadRequest("CV phải gửi file .docx hoặc .pdf");
-
-            using var stream = cv.OpenReadStream();// cloudinary không lấy thằng dữ liệu dạng iformfile được mà phải chuyển sang dạng stream(claude)
-            var uploadParam = new RawUploadParams
+            var result = await _fileUploadService.Upload_CV_AVT(cv, CVfolder, CVpublicId, new[] { ".docx", ".pdf" }, 5 * 1024 * 1024, isRaw: true);
+            if (!result.IsSuccess)
             {
-                File = new FileDescription(cv.FileName, stream),
-                Folder = "WorkHub/finder/cv"
+                return BadRequest(result.ErrorMessage);
+            }
 
-            };
-
-            var uploadResult = await _cloudinary.UploadAsync(uploadParam);
-            var url = uploadResult.SecureUrl.ToString();
-
-            profile.Cv = url;
+            profile.Cv = result.Url;
             await _context.SaveChangesAsync();
-            return Ok(url);
+            return Ok(result.Url);
         }
     }
 }

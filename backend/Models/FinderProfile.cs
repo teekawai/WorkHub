@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using Microsoft.EntityFrameworkCore.Storage.ValueConversion.Internal;
 
 namespace backend.Models;
 
@@ -28,6 +29,8 @@ public partial class Finderprofile
     public string? Major { get; set; }
 
     public string? Skill { get; set; }
+    public DateTime DateOfBirth {get; set;}
+    public string? Gender {get; set;}
 
     public virtual ICollection<Application> Applications { get; set; } = new List<Application>();
 
