@@ -2,7 +2,8 @@ import { useEffect, useRef, useState } from "react"
 import toast from "react-hot-toast"
 import { getFinderProfile, getProfileMsg, updateFinderProfile, uploadAvatar } from "../../api/finderProfile"
 import CvPaper from "../../components/finder/CvPaper"
-import ConfirmDialog from "../../components/finder/ConfirmDialog"
+import ConfirmDialog from "../../components/shared/ConfirmDialog"
+import Button from "../../components/shared/Button"
 import CvUploadCard from "../../components/finder/CvUploadCard"
 import validateFinderProfile from "../../utils/FinderProfileValidate"
 
@@ -23,9 +24,6 @@ const toPayload = (draft) => ({
 
 const AVATAR_MAX_SIZE = 2 * 1024 * 1024 //BE chỉ nhận ≤ 2MB
 const AVATAR_EXT = [".jpg", ".png"] //BE không nhận .jpeg
-
-const primaryBtn = "rounded-lg bg-[#155DFC] px-4 py-2 text-sm font-medium text-white transition-colors hover:bg-[#0F4FE0] disabled:cursor-not-allowed disabled:opacity-60"
-const secondaryBtn = "rounded-lg border border-slate-300 bg-white px-4 py-2 text-sm font-medium text-slate-700 transition-colors hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-60"
 
 //Trang Profile. Trạng thái tải: loading / empty (user mới, BE trả 404) / ready / error. Thêm chế độ sửa (isEditing)
 function FinderProfile() {
@@ -163,17 +161,17 @@ function FinderProfile() {
                     <div className="flex gap-2">
                         {isEditing ? (
                             <>
-                                <button type="button" onClick={askCancel} disabled={saving} className={secondaryBtn}>
+                                <Button variant="secondary" onClick={askCancel} disabled={saving}>
                                     Cancel
-                                </button>
-                                <button type="button" onClick={askSave} disabled={saving} className={primaryBtn}>
+                                </Button>
+                                <Button variant="primary" onClick={askSave} disabled={saving}>
                                     {saving ? "Saving…" : "Save changes"}
-                                </button>
+                                </Button>
                             </>
                         ) : (
-                            <button type="button" onClick={startEdit} className={primaryBtn}>
+                            <Button variant="primary" onClick={startEdit}>
                                 Edit profile
-                            </button>
+                            </Button>
                         )}
                     </div>
                 )}
@@ -207,9 +205,9 @@ function FinderProfile() {
                 <div className="rounded-2xl border border-dashed border-slate-300 bg-white px-6 py-14 text-center">
                     <h2 className="text-lg font-semibold text-slate-900">You haven't created your profile yet</h2>
                     <p className="mx-auto mt-1 max-w-sm text-sm text-slate-500">Add your details so recruiters can see your CV when you apply.</p>
-                    <button type="button" onClick={startEdit} className={`${primaryBtn} mt-6`}>
+                    <Button variant="primary" onClick={startEdit} className="mt-6">
                         Create your profile
-                    </button>
+                    </Button>
                 </div>
             )}
 
