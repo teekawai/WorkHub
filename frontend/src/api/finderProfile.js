@@ -14,22 +14,31 @@ export const getFinderProfile = async () => {
 
 //helper status code of getProfile
 export const getProfileMsg = (err) => {
-    if (!err.response.status) {
-        return "Cannot connect to server!"
+    if (!err.response) {
+        return "Cannot connect to the server. Please check your connection."
     } else {
         var eStatus = err.response?.status
         switch (eStatus) {
+            case 400: {
+                return "Some information is invalid. Please check and try again."
+            }
             case 403: {
                 return "You don't have access to this page."
             }
             case 404: {
-                return "We couldn't find what you were looking for."
+                return "We couldn't find your profile."
+            }
+            case 409: {
+                return "This information is already in use."
+            }
+            case 413: {
+                return "The file is too large."
             }
             case 500: {
-                return "The server is error."
+                return "Something went wrong on our side. Please try again later."
             }
             default: {
-                return "Error!"
+                return "Something went wrong. Please try again."
             }
         }
 

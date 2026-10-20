@@ -88,6 +88,9 @@ public partial class WorkHubContext : DbContext
             entity.Property(e => e.Address)
                 .HasMaxLength(255)
                 .HasColumnName("address");
+            entity.Property(e => e.IsVerified)
+                .HasMaxLength(255)
+                .HasColumnName("isVerified");
             entity.Property(e => e.CompanyName)
                 .HasMaxLength(100)
                 .HasColumnName("companyName");
@@ -138,6 +141,12 @@ public partial class WorkHubContext : DbContext
             entity.Property(e => e.Description)
                 .HasColumnType("text")
                 .HasColumnName("description");
+            entity.Property(e => e.DateOfBirth)
+                .HasMaxLength(255)
+                .HasColumnName("dateOfBirth");
+            entity.Property(e => e.Gender)
+                .HasMaxLength(255)
+                .HasColumnName("gender");
             entity.Property(e => e.EducationLevel)
                 .HasMaxLength(30)
                 .HasColumnName("educationLevel");
@@ -182,6 +191,12 @@ public partial class WorkHubContext : DbContext
             entity.Property(e => e.Deadline)
                 .HasColumnType("datetime")
                 .HasColumnName("deadline");
+            entity.Property(e => e.Category)
+                .HasMaxLength(255)
+                .HasColumnName("category");
+            entity.Property(e => e.ExperienceRequired)
+                .HasMaxLength(255)
+                .HasColumnName("experienceRequired");
             entity.Property(e => e.Description)
                 .HasColumnType("text")
                 .HasColumnName("description");

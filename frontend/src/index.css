@@ -1,5 +1,14 @@
 @import "tailwindcss";
-@import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800;900&display=swap');
+/* Font Inter được nạp bằng <link> trong index.html (chỉ 3 độ đậm 400 / 500 / 600).
+   Quy ước chữ: 400 nội dung, 500 nhãn và nút, 600 tiêu đề. */
+@theme {
+  --font-sans: "Inter", ui-sans-serif, system-ui, -apple-system, "Segoe UI", sans-serif;
+
+  /* gộp các độ đậm lớn về 600 để không còn bold/extrabold/black (và không bị trình duyệt tự làm đậm giả) */
+  --font-weight-bold: 600;
+  --font-weight-extrabold: 600;
+  --font-weight-black: 600;
+}
 
 :root {
   --text: #374151;
@@ -8,7 +17,7 @@
   --border: #e5e7eb;
   --blue-primary: #2563eb;
   --blue-dark: #1d4ed8;
-  --sans: 'Plus Jakarta Sans', system-ui, sans-serif;
+  --sans: var(--font-sans);
 
   font-family: var(--sans);
   font-size: 16px;

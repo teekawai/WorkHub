@@ -17,6 +17,7 @@ public partial class Application
 
     public string? CoverLetter { get; set; }
 
+
     public virtual Finderprofile Finder { get; set; } = null!;
 
     public virtual Job Job { get; set; } = null!;

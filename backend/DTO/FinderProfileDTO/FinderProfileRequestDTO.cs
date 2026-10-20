@@ -8,6 +8,7 @@ namespace backend.DTO.FinderProfileDTO
         public string Fullname { get; set; } = null!;
 
         [Required(ErrorMessage = "Không bỏ trống!")]
+        [RegularExpression(@"^\d{10}$")]
         public string Phone { get; set; } = null!;
 
         public string? Description { get; set; }
