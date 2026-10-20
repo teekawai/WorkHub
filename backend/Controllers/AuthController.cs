@@ -1,26 +1,14 @@
 ﻿using backend.DTO;
-using backend.DTO.AuthDTO;
 using backend.Models;
 using backend.Repositories;
 using backend.Services.auth;
-using BCrypt.Net;
-using Google.Apis.Auth;
 using Microsoft.AspNetCore.Authorization;
-using Microsoft.AspNetCore.Components.Server.ProtectedBrowserStorage;
-using Microsoft.AspNetCore.Http.HttpResults;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.RateLimiting;
-using Microsoft.EntityFrameworkCore;
-using Microsoft.Extensions.Configuration.UserSecrets;
-using Microsoft.IdentityModel.Tokens;
-using Microsoft.IdentityModel.Tokens.Experimental;
-using System.IdentityModel.Tokens.Jwt;
-using System.Net.WebSockets;
-using System.Runtime.Intrinsics.Arm;
 using System.Security.Claims;
-using System.Security.Cryptography;
-using System.Text;
 using StackExchange.Redis;
+using backend.Common;
+using Microsoft.AspNetCore.Authentication.BearerToken;
 
 
 namespace backend.Controllers
@@ -28,7 +16,7 @@ namespace backend.Controllers
 
     [ApiController]
     [Route("api/auth")]
-    [EnableRateLimiting("fixed")]
+    [EnableRateLimiting("auth")]
 
     public class AuthController : ControllerBase
     {
@@ -36,15 +24,16 @@ namespace backend.Controllers
         private readonly IConfiguration _configuration;
         private readonly IJwtTokenService _jwtTokenService;
         private readonly UserRepository _userRepo;
-        private readonly LoginService _loginService;
+        private readonly ILoginService _loginService;
         private readonly INewRegisterService _registerService;
         private readonly ITokenValidate _refTokenService;
+        private readonly IGoogleAuthService _googleAuthService;
         private readonly IDatabase _redis;
 
         public AuthController(WorkHubContext context, IConfiguration _configuration,
             IJwtTokenService _jwtTokenService, UserRepository _repo,
-            LoginService _loginService, INewRegisterService _registerService,
-            ITokenValidate refTokenService, IConnectionMultiplexer _redis)
+            ILoginService _loginService, INewRegisterService _registerService,
+            ITokenValidate refTokenService, IGoogleAuthService googleAuthService, IConnectionMultiplexer _redis)
         {
             this._workHubContext = context;
             this._configuration = _configuration;
@@ -53,6 +42,7 @@ namespace backend.Controllers
             this._loginService = _loginService;
             this._registerService = _registerService;
             this._refTokenService = refTokenService;
+            this._googleAuthService = googleAuthService;
             this._redis = _redis.GetDatabase();
         }
 
@@ -62,63 +52,45 @@ namespace backend.Controllers
         {
             var user = await _registerService.CreateUser(dto);
 
-            return user.code switch
+            return user.Code switch
             {
-                ErrorCode.Success => Ok(new { user.data.UserId, user.data.Email, user.data.Username, user.data.Role }),
-                ErrorCode.NotFound => NotFound(new { message = user.message }),
-                ErrorCode.Conflict => Conflict(new { message = user.message }),
-                ErrorCode.BadRequest => BadRequest(new { message = user.message }),
+                ErrorCode.Success => Ok(new { user.Data!.UserId, user.Data.Email, user.Data.Username, user.Data.Role }),
+                ErrorCode.NotFound => NotFound(new { message = user.Message }),
+                ErrorCode.Conflict => Conflict(new { message = user.Message }),
+                ErrorCode.BadRequest => BadRequest(new { message = user.Message }),
                 _ => StatusCode(500, new { message = "Lỗi không xác định" })
             };
         }
 
-        [HttpPost("google")]
-        public async Task<IActionResult> GoogleAuth([FromBody] GoogleLoginDTO dto, bool rememberMe)
+        //tạo cả access và refresh token nhưng lưu refresh token vào cookie và redis, còn trả lại accessToken thôi
+        private async Task<string> CreateJwtToken(bool rememberMe, User user)
         {
-            GoogleJsonWebSignature.Payload payload;
-
-            //service của gg, tạo client id hoặc check xem có chưa
-            try
-            {
-                var settings = new GoogleJsonWebSignature.ValidationSettings
-                {
-                    Audience = new[] { _configuration["Google_clientID"] }
-                };
-                payload = await GoogleJsonWebSignature.ValidateAsync(dto.Token, settings);
-            }
-            catch
-            {
-                return Unauthorized("Google token không hợp lệ");
-            }
-
-            //Nốt việc validate, add user, save db
-            var user = await _workHubContext.Users.FirstOrDefaultAsync(u => u.Email == payload.Email);
-            //nếu user null thì đăng ký user đó 
-            if (user == null)
-            {
-                user = new User
-                {
-                    UserId = Guid.NewGuid().ToString(),
-                    Username = payload.Email,
-                    PasswordHash = null,
-                    Role = dto.Role
-                };
-                _workHubContext.Add(user);
-                await _workHubContext.SaveChangesAsync();
-            }
-            //đăng nhập user
             var (accessToken, refreshToken) = _jwtTokenService.NewToken(user, rememberMe);
-            var tokenLifeTime = rememberMe ? TimeSpan.FromDays(15) : TimeSpan.FromMinutes(15);
-            await _redis.StringSetAsync($"refresh:{user.UserId}", refreshToken, tokenLifeTime);
+            var tokenLifeTime = rememberMe ? TimeSpan.FromDays(30) : TimeSpan.FromMinutes(15);
+            await _redis.StringSetAsync($"refresh:{user.UserId}", refreshToken, tokenLifeTime);// lưu refresh token vào redis
 
             //cho refresh token trả về dưới dạng httponly cookie(nhằm tránh js đọc được, không bị kẻ khác tấn công)
             Response.Cookies.Append("refreshToken", refreshToken, new CookieOptions
-            {
+            { 
                 HttpOnly = true, //chỉ http thôi, tránh js đọc được
                 Secure = true, // chỉ gửi qua giao thức https, không gửi qua http
                 SameSite = SameSiteMode.Strict, //cookie chỉ gửi request xuất phát từ cùng 1 site
                 Expires = rememberMe ? DateTime.UtcNow.AddDays(30) : (DateTimeOffset?)null //nếu có rememberme thì lưu refresh token lại trong 30 ngày, không thì sẽ hết hiệu lực khi đóng browser
             });
+            return accessToken;
+        }
+
+        [HttpPost("google")]
+        public async Task<IActionResult> GoogleAuth([FromBody] GoogleLoginDTO dto)
+        {
+            var result = await _googleAuthService.AuthenticateAsync(dto);
+            if (!result.IsSuccess)
+            {
+                return Unauthorized(new { message = result.Message });
+            }
+
+            var user = result.Data!;
+            var accessToken = await CreateJwtToken(dto.rememberMe, user);
             return Ok(new
             {
                 accessToken = accessToken,
@@ -129,32 +101,36 @@ namespace backend.Controllers
         }
 
         [HttpPost("login")]
-        
+
         public async Task<IActionResult> Login(LoginRequestDTO dto)
         {
             var result = await _loginService.LoginResult(dto);
 
-            //check có dữ liệu user được trả về kh, kh thì lỗi, có thì lưu refreshToken vào cookies
-            if (result.status != ErrorStatus.Success)
+            //check có dữ liệu user được trả về kh, kh thì lỗi, có thì tạo token qua hàm chung
+            if (!result.IsSuccess)
             {
-                return result.status switch
+                return result.Code switch
                 {
-                    ErrorStatus.Unauthorized => Unauthorized(new { msg = result.message }),
-                    ErrorStatus.RedisServerDown => StatusCode(503, new { msg = result.message }),
+                    ErrorCode.Unauthorized => Unauthorized(new { message = result.Message }),
+                    ErrorCode.ServiceUnavailable => StatusCode(503, new { message = result.Message }),
                     _ => StatusCode(500, new { message = "Lỗi không xác định" })
                 };
             }
 
-            //cho refresh token trả về dưới dạng httponly cookie
-            Response.Cookies.Append("refreshToken", result.data.refreshToken, new CookieOptions
+            var user = result.Data!;
+            string accessToken;
+            try
             {
-                HttpOnly = true, //chỉ http thôi, tránh js đọc được
-                Secure = true, // chỉ gửi qua giao thức https, không gửi qua http
-                SameSite = SameSiteMode.Strict, //cookie chỉ gửi request xuất phát từ cùng 1 site
-                Expires = dto.rememberMe ? DateTime.UtcNow.AddDays(30) : (DateTimeOffset?)null //nếu có rememberme thì lưu refresh token lại trong 30 ngày, không thì sẽ hết hiệu lực khi đóng browser
-            });
-            //return dữ liệu vào local
-            return Ok(new { result.data.accessToken, result.data.Email, result.data.UserId, result.data.Role });
+                //hàm chung này tự tạo access + refresh token, lưu refresh vào redis, và set cookie refreshToken
+                accessToken = await CreateJwtToken(dto.rememberMe, user);
+            }
+            catch (RedisConnectionException ex)
+            {
+                return StatusCode(503, new { message = "The service is temporarily unavailable. Please try again later.(" + ex + ")" });
+            }
+
+            //return dữ liệu vào local cho phía fe
+            return Ok(new { accessToken, user.Email, user.UserId, user.Role });
         }
 
         [HttpPost("refresh")]
@@ -162,12 +138,12 @@ namespace backend.Controllers
         {
             var refreshToken = Request.Cookies["refreshToken"];
             var principle = await _refTokenService.ValidateToken(refreshToken);
-            if(principle.code != Services.auth.StatusCode.Success)
+            if (!principle.IsSuccess)
             {
-                return Unauthorized(new {message = principle.message});
+                return Unauthorized(new { message = principle.Message });
             }
             // nếu đoạn principle ok thì cấp lại accesstoken mới cho người dùng
-            var userId = principle.principle.FindFirst(ClaimTypes.NameIdentifier)?.Value;
+            var userId = principle.Data!.FindFirst(ClaimTypes.NameIdentifier)?.Value;
             var user = await _workHubContext.Users.FindAsync(userId);
             if (user == null)
             {
@@ -184,16 +160,24 @@ namespace backend.Controllers
         {
             var userId = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
             if (userId == null) return Unauthorized();
-            
+
             try
             {
                 await _redis.KeyDeleteAsync($"refresh:{userId}");
-                Response.Cookies.Delete("refreshToken");
-                return Ok("Đăng xuất thành công!");
+                //xóa cookie phải dùng cùng options với lúc tạo cookie
+                Response.Cookies.Delete("refreshToken", new CookieOptions
+                {
+                    HttpOnly = true,
+                    Secure = true,
+                    SameSite = SameSiteMode.Strict
+                });
+                return Ok(new { message = "Logged out successfully." });
             }
-            catch (RedisConnectionException ex)
+            catch (RedisException ex)
             {
-                return StatusCode(503, new { msg = "Server đang bảo trì, vui lòng thử lại sau:" + ex.Message });
+                //ghi lỗi ở server, không trả chi tiết lỗi Redis về cho client
+                Console.Error.WriteLine($"Redis error during logout: {ex.Message}");
+                return StatusCode(503, new { message = "The service is temporarily unavailable. Please try again later." });
             }
 
 
