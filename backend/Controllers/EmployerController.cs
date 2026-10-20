@@ -2,8 +2,8 @@
 using backend.DTO.EmployerDTO;
 using backend.DTO.FinderProfileDTO;
 using backend.Models;
-using CloudinaryDotNet;
-using CloudinaryDotNet.Actions;
+using Microsoft.AspNetCore.RateLimiting;
+using backend.Services.files;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
@@ -13,14 +13,15 @@ namespace backend.Controllers
 {
     [Route("api/employer")]
     [Authorize(Roles = "employer")]
+    
     public class EmployerController : Controller
     {
         private readonly WorkHubContext _context;
-        private readonly ICloudinary _cloudinary;
-        public EmployerController(WorkHubContext context, ICloudinary cloudinary)
+        private readonly IFileUploadService _fileUploadService;
+        public EmployerController(WorkHubContext context, IFileUploadService fileUploadService)
         {
             _context = context;
-            _cloudinary = cloudinary;
+            _fileUploadService = fileUploadService;
         }
 
         [HttpGet("me")]
@@ -76,7 +77,6 @@ namespace backend.Controllers
             //sửa
             else
             {
-                
                 var duplicateName = await _context.Employerprofiles
                     .AnyAsync(e => e.CompanyName == dto.CompanyName && e.UserId != currentUserId);
                 if (duplicateName) return Conflict(new { message = "Tên công ty đã tồn tại" });
@@ -99,37 +99,27 @@ namespace backend.Controllers
         }
 
         [HttpPost("me/logo")]
+        [EnableRateLimiting("upload_cv_avt")]
         public async Task<IActionResult> UploadAvatar(IFormFile avatar)
         {
             string currentUserId = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
-            var profile = await _context.Employerprofiles.FirstOrDefaultAsync(u => u.UserId == currentUserId); // cái này là lấy UserId từ Jwt token, nếu muốn lấy role thì thay nameIdentifier thành roles là được
+            var profile = await _context.Employerprofiles.Include(p => p.User).FirstOrDefaultAsync(u => u.UserId == currentUserId); // cái này là lấy UserId từ Jwt token, nếu muốn lấy role thì thay nameIdentifier thành roles là được
             if (profile == null)
             {
                 return NotFound("Chưa có hồ sơ");
             }
+            string logoFolder = $"WorkHub/employer/logo/{profile.UserId}"; //tách theo từng employer, trước đây để chung 1 folder cho mọi employer
+            string logoPublicId = $"{logoFolder}/{profile.User.Username}_Logo"; //cố định theo user -> upload sau sẽ ghi đè đúng file này, không tạo file mới
 
-            // validate
-            if (avatar == null || avatar.Length == 0) return BadRequest("Chưa có ảnh đại diện!");
-            if (avatar.Length > 2 * 1024 * 1024) return BadRequest("Dung lượng ảnh quá lớn!");
-
-            var avtExtension = Path.GetExtension(avatar.FileName).ToLower();//lấy định dạng ảnh
-            if (avtExtension != ".jpg" && avtExtension != ".png") return BadRequest("Sai định dạng ảnh");
-
-            using var stream = avatar.OpenReadStream();// cloudinary không lấy thằng dữ liệu dạng iformfile được mà phải chuyển sang dạng stream(claude)
-            var uploadParam = new ImageUploadParams
+            var result = await _fileUploadService.Upload_CV_AVT(avatar, logoFolder, logoPublicId, new[] { ".jpg", ".png" }, 2 * 1024 * 1024);
+            if (!result.IsSuccess)
             {
-                File = new FileDescription(avatar.FileName, stream),
-                Folder = "WorkHub/employer/logo"
-            };
+                return BadRequest(result.ErrorMessage);
+            }
 
-            var uploadResult = await _cloudinary.UploadAsync(uploadParam);
-            var url = uploadResult.SecureUrl.ToString();
-
-            profile.Logo = url;
+            profile.Logo = result.Url;
             await _context.SaveChangesAsync();
-            return Ok(url);
+            return Ok(result.Url);
         }
-
-
     }
 }
