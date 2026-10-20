@@ -56,14 +56,14 @@ function NavBar({ currentUser, transparent = false, isEmployer = false }) {
     }
 
     const finderLinks = [
-        { label: "Tìm việc làm", to: "#" },
-        { label: "Việc đã ứng tuyển", to: "#" },
+        { label: "Find jobs", to: "#" },
+        { label: "Applied jobs", to: ROUTE_PATH.FINDER.APPLICATIONS },
     ]
 
     const employerLinks = [
-        { label: "Đăng tin tuyển dụng", to: "#" },
-        { label: "Tin đã đăng", to: "#" },
-        { label: "Xem ứng viên", to: "#" },
+        { label: "Post a job", to: "#" },
+        { label: "My job posts", to: "#" },
+        { label: "View applicants", to: "#" },
     ]
 
     const navLinks = currentUser?.role === "employer" ? employerLinks : finderLinks
@@ -139,18 +139,18 @@ function NavBar({ currentUser, transparent = false, isEmployer = false }) {
                             {dropdownOpen && (
                                 <div className="absolute right-0 top-full mt-2 w-44 bg-white rounded-xl shadow-lg overflow-hidden z-50 border border-gray-100">
                                     <div className="px-3 py-2 border-b border-gray-100">
-                                        <p className="text-xs text-gray-400">Đăng nhập với tư cách</p>
+                                        <p className="text-xs text-gray-400">Signed in as</p>
                                         <p className="text-xs font-semibold text-gray-700 capitalize">{currentUser.role}</p>
                                     </div>
                                     {currentUser.role === "finder"
-                                        ? <Link to={ROUTE_PATH.FINDER.PROFILE} onClick={() => setDropdownOpen(false)} className="block px-3 py-2 text-sm text-gray-700 hover:bg-blue-50 hover:text-blue-600 transition-colors no-underline">Hồ sơ cá nhân</Link>
-                                        : <Link to={ROUTE_PATH.EMPLOYER.PROFILE} onClick={() => setDropdownOpen(false)} className="block px-3 py-2 text-sm text-gray-700 hover:bg-blue-50 hover:text-blue-600 transition-colors no-underline">Hồ sơ công ty</Link>
+                                        ? <Link to={ROUTE_PATH.FINDER.PROFILE} onClick={() => setDropdownOpen(false)} className="block px-3 py-2 text-sm text-gray-700 hover:bg-blue-50 hover:text-blue-600 transition-colors no-underline">My profile</Link>
+                                        : <Link to={ROUTE_PATH.EMPLOYER.PROFILE} onClick={() => setDropdownOpen(false)} className="block px-3 py-2 text-sm text-gray-700 hover:bg-blue-50 hover:text-blue-600 transition-colors no-underline">Company profile</Link>
                                     }
                                     <button
                                         onClick={handleLogout}
                                         className="w-full text-left px-3 py-2 text-sm text-red-500 hover:bg-red-50 transition-colors"
                                     >
-                                        Đăng xuất
+                                        Log out
                                     </button>
                                 </div>
                             )}
@@ -158,10 +158,10 @@ function NavBar({ currentUser, transparent = false, isEmployer = false }) {
                     ) : (
                         <div className="flex items-center gap-2">
                             <Link to={ROUTE_PATH.AUTH.LOGIN} className="px-3 py-1.5 text-sm font-semibold bg-white text-blue-600 rounded-full hover:bg-gray-100 transition-colors no-underline">
-                                Đăng nhập
+                                Log in
                             </Link>
                             <Link to={ROUTE_PATH.AUTH.REGISTER} className="px-3 py-1.5 text-sm font-medium text-white/90 rounded-full hover:bg-white/15 hover:text-white transition-colors no-underline">
-                                Đăng ký
+                                Sign up
                             </Link>
                         </div>
                     )}

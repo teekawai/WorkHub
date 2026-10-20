@@ -101,6 +101,12 @@ namespace backend.Migrations
                         .HasColumnType("int")
                         .HasColumnName("foundedYear");
 
+                    b.Property<string>("IsVerified")
+                        .IsRequired()
+                        .HasMaxLength(255)
+                        .HasColumnType("varchar(255)")
+                        .HasColumnName("isVerified");
+
                     b.Property<string>("Logo")
                         .HasMaxLength(255)
                         .HasColumnType("varchar(255)")
@@ -154,6 +160,11 @@ namespace backend.Migrations
                         .HasColumnType("varchar(255)")
                         .HasColumnName("CV");
 
+                    b.Property<DateTime>("DateOfBirth")
+                        .HasMaxLength(255)
+                        .HasColumnType("datetime(6)")
+                        .HasColumnName("dateOfBirth");
+
                     b.Property<string>("Description")
                         .HasColumnType("text")
                         .HasColumnName("description");
@@ -172,6 +183,11 @@ namespace backend.Migrations
                         .HasMaxLength(100)
                         .HasColumnType("varchar(100)")
                         .HasColumnName("fullname");
+
+                    b.Property<string>("Gender")
+                        .HasMaxLength(255)
+                        .HasColumnType("varchar(255)")
+                        .HasColumnName("gender");
 
                     b.Property<string>("LinkedIn")
                         .HasMaxLength(255)
@@ -209,6 +225,12 @@ namespace backend.Migrations
                         .HasColumnType("text")
                         .HasColumnName("applicantBenefit");
 
+                    b.Property<string>("Category")
+                        .IsRequired()
+                        .HasMaxLength(255)
+                        .HasColumnType("varchar(255)")
+                        .HasColumnName("category");
+
                     b.Property<DateTime>("CreatedAt")
                         .HasColumnType("datetime")
                         .HasColumnName("createdAt");
@@ -227,6 +249,12 @@ namespace backend.Migrations
                         .HasMaxLength(36)
                         .HasColumnType("varchar(36)")
                         .HasColumnName("employerId");
+
+                    b.Property<string>("ExperienceRequired")
+                        .IsRequired()
+                        .HasMaxLength(255)
+                        .HasColumnType("varchar(255)")
+                        .HasColumnName("experienceRequired");
 
                     b.Property<ulong>("IsNegotiable")
                         .HasColumnType("bit(1)")

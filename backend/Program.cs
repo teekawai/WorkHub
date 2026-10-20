@@ -1,6 +1,7 @@
 using backend.Models;
 using backend.Repositories;
 using backend.Services.auth;
+using backend.Services.files;
 using CloudinaryDotNet;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.AspNetCore.RateLimiting;
@@ -58,10 +59,12 @@ var cloudinaryAccount = new Account(cloudName, apiKey, apiSecret);
 var cloudinary = new Cloudinary(cloudinaryAccount);
 builder.Services.AddSingleton<ICloudinary>(cloudinary);
 builder.Services.AddScoped<UserRepository>();
-builder.Services.AddScoped<LoginService>();
+builder.Services.AddScoped<ILoginService, LoginService>();
 builder.Services.AddScoped<IJwtTokenService, JwtService>();
 builder.Services.AddScoped<INewRegisterService, RegisterService>();
 builder.Services.AddScoped<ITokenValidate, RefreshTokenValidate>();
+builder.Services.AddScoped<IFileUploadService, FileUploadService>();
+builder.Services.AddScoped<IGoogleAuthService, GoogleAuthService>();
 builder.Services.AddHttpContextAccessor();
 builder.Services.AddSingleton<IConnectionMultiplexer>(
     ConnectionMultiplexer.Connect(redisConnectionString)
@@ -70,10 +73,23 @@ builder.Services.AddSingleton<IConnectionMultiplexer>(
 // Rate limit for auth
 builder.Services.AddRateLimiter(options =>
 {
-    options.AddFixedWindowLimiter("fixed", opt =>
+    options.AddFixedWindowLimiter("auth", opt =>
     {
         opt.PermitLimit = 5;
         opt.Window = TimeSpan.FromSeconds(15);
+        opt.QueueProcessingOrder = QueueProcessingOrder.OldestFirst;
+        opt.QueueLimit = 3;
+    });
+    options.RejectionStatusCode = 429;
+});
+
+//Rate limit cho upload cv và avatar trong profile
+builder.Services.AddRateLimiter(options =>
+{
+    options.AddFixedWindowLimiter("upload_cv_avt", opt =>
+    {
+        opt.PermitLimit = 5;
+        opt.Window = TimeSpan.FromMinutes(10);
         opt.QueueProcessingOrder = QueueProcessingOrder.OldestFirst;
         opt.QueueLimit = 3;
     });

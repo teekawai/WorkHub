@@ -9,6 +9,9 @@ import Register from './pages/auth/Register'
 import FinderHome from './pages/finder/FinderHome'
 import EmployerHome from './pages/employer/EmployerHome'
 import GeneralUserHome from './pages/GeneralUserHome'
+import FinderLayout from './components/finder/FinderLayout'
+import FinderProfile from './pages/finder/FinderProfile'
+import FinderApplications from './pages/finder/FinderApplications'
 
 function App() {
   const [currentUser, setCurrentUser] = useState(() =>
@@ -45,6 +48,18 @@ function App() {
         element={<Direct currentUser={currentUser}/>
         }
       />
+
+      {/* Finder workspace: layout có sidebar, các trang con render vào <Outlet /> */}
+      <Route
+        element={
+          <ProtectedRoute role="finder">
+            <FinderLayout />
+          </ProtectedRoute>
+        }
+      >
+        <Route path={ROUTE_PATH.FINDER.PROFILE} element={<FinderProfile />} />
+        <Route path={ROUTE_PATH.FINDER.APPLICATIONS} element={<FinderApplications />} />
+      </Route>
 
       {/* Employer */}
       <Route

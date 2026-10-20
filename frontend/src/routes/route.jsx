@@ -10,7 +10,8 @@ export const ROUTE_PATH = {
     },
     FINDER:{
         HOME:'/finder/home',
-        PROFILE:'/finder/profile'
+        PROFILE:'/finder/profile',
+        APPLICATIONS:'/finder/applications'
     }
 
 }

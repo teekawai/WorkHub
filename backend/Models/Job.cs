@@ -10,11 +10,12 @@ public partial class Job
     public string EmployerId { get; set; } = null!;
 
     public string JobTitle { get; set; } = null!;
+    public string Category {get; set; } = null!;
 
     public string Description { get; set; } = null!;
 
     public string Requirement { get; set; } = null!;
-
+    public string ExperienceRequired {get; set;} =null!;
     public string ApplicantBenefit { get; set; } = null!;
 
     public DateTime Deadline { get; set; }
