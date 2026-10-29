@@ -29,11 +29,14 @@ namespace backend.Services.files
 
             using var stream = file.OpenReadStream();
 
+            //tên file gốc có thể chứa tiếng Việt/dấu cách/ký tự lạ -> dùng tên an toàn, PublicId mới là thứ quyết định file trên Cloudinary
+            var safeFileName = $"{Guid.NewGuid():N}{extension}";
+
             // ImageUploadParams kế thừa RawUploadParams -> dùng chung biến, chỉ khác loại params khởi tạo
             RawUploadParams uploadParam = isRaw
                 ? new RawUploadParams
                 {
-                    File = new FileDescription(file.FileName, stream),
+                    File = new FileDescription(safeFileName, stream),
                     PublicId = publicId,
                     Overwrite = true,
                     Invalidate = true,
@@ -41,7 +44,7 @@ namespace backend.Services.files
                 }
                 : new ImageUploadParams
                 {
-                    File = new FileDescription(file.FileName, stream),
+                    File = new FileDescription(safeFileName, stream),
                     PublicId = publicId,
                     Overwrite = true,
                     Invalidate = true,
@@ -50,9 +53,30 @@ namespace backend.Services.files
 
             var uploadResult = await _cloudinary.UploadAsync(uploadParam);
             if (uploadResult.Error != null)
-                return FileUploadResult.Fail("Lưu file không thành công");
+            {
+                Console.WriteLine($"[Cloudinary upload error] {uploadResult.Error.Message}"); //xem ở cửa sổ chạy dotnet
+                return FileUploadResult.Fail($"Lưu file không thành công: {uploadResult.Error.Message}");
+            }
 
             return FileUploadResult.Ok(uploadResult.SecureUrl.ToString());
+        }
+
+        public async Task<bool> DeleteFileAsync(string publicId, bool isRaw = false)
+        {
+            try
+            {
+                var delParams = new DeletionParams(publicId)
+                {
+                    ResourceType = isRaw ? ResourceType.Raw : ResourceType.Image
+                };
+                var result = await _cloudinary.DestroyAsync(delParams);
+                return result.Result == "ok";
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"[Cloudinary delete error] {ex.Message}");
+                return false;
+            }
         }
     }
 }

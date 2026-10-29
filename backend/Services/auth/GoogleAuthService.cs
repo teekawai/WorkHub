@@ -48,7 +48,19 @@ namespace backend.Services.auth
                     Role = dto.Role
                 };
                 _context.Add(user);
-                await _context.SaveChangesAsync();
+                try
+                {
+                    await _context.SaveChangesAsync();
+                }
+                catch (DbUpdateException)
+                {
+                    // Tránh race condition: nếu một request khác đã tạo user này ngay trước đó
+                    user = await _context.Users.FirstOrDefaultAsync(u => u.Email == payload.Email);
+                    if (user == null)
+                    {
+                        return ServiceResult<User>.Fail(ErrorCode.Conflict, "Không thể xác thực Google lúc này, vui lòng thử lại.");
+                    }
+                }
             }
 
             return ServiceResult<User>.Success(user, "Xác thực Google thành công");

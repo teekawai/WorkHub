@@ -1,7 +1,8 @@
 import { useState, useEffect, useRef } from "react"
 import { Link, useNavigate } from "react-router-dom"
 import { ROUTE_PATH } from "../../routes/route"
-import { logout } from "../../api/auth"
+import { logout as logoutApi } from "../../api/auth"
+import { useAuth } from "../../context/AuthContext"
 import defaultAvatar from "../../assets/avt-macdinh.webp"
 
 // transparent=true → absolute, overlay lên hero, nền trong suốt tối nhẹ
@@ -9,6 +10,7 @@ import defaultAvatar from "../../assets/avt-macdinh.webp"
 // isEmployer=true → fixed glassmorphic navbar cho employer zone
 function NavBar({ currentUser, transparent = false, isEmployer = false }) {
     const navigate = useNavigate()
+    const { logout } = useAuth() //dùng logout của AuthContext để state currentUser ở App.jsx cũng được reset ngay, không chỉ xóa localStorage như trước
     const [menuOpen, setMenuOpen] = useState(false)
     const [dropdownOpen, setDropdownOpen] = useState(false)
     const [scrolled, setScrolled] = useState(false)
@@ -46,11 +48,11 @@ function NavBar({ currentUser, transparent = false, isEmployer = false }) {
 
     const handleLogout = async () => {
         try {
-            await logout()
+            await logoutApi() //gọi BE để hủy refreshToken (cookie) — đổi tên chủ để không đụng hàm logout của AuthContext
         } catch (e) {
             console.error(e)
         } finally {
-            localStorage.removeItem("currentUser")
+            logout() //xóa localStorage + reset state currentUser cùng lúc (trước đây chỉ xóa localStorage, state App.jsx bị đứng im tới khi F5)
             navigate(ROUTE_PATH.AUTH.LOGIN)
         }
     }

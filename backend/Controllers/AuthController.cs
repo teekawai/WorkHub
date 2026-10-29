@@ -1,4 +1,4 @@
-﻿using backend.DTO;
+using backend.DTO;
 using backend.Models;
 using backend.Repositories;
 using backend.Services.auth;
@@ -9,6 +9,7 @@ using System.Security.Claims;
 using StackExchange.Redis;
 using backend.Common;
 using Microsoft.AspNetCore.Authentication.BearerToken;
+using Microsoft.EntityFrameworkCore;
 
 
 namespace backend.Controllers
@@ -66,7 +67,7 @@ namespace backend.Controllers
         private async Task<string> CreateJwtToken(bool rememberMe, User user)
         {
             var (accessToken, refreshToken) = _jwtTokenService.NewToken(user, rememberMe);
-            var tokenLifeTime = rememberMe ? TimeSpan.FromDays(30) : TimeSpan.FromMinutes(15);
+            var tokenLifeTime = rememberMe ? TimeSpan.FromDays(30) : TimeSpan.FromDays(7);
             await _redis.StringSetAsync($"refresh:{user.UserId}", refreshToken, tokenLifeTime);// lưu refresh token vào redis
 
             //cho refresh token trả về dưới dạng httponly cookie(nhằm tránh js đọc được, không bị kẻ khác tấn công)
@@ -140,11 +141,15 @@ namespace backend.Controllers
             var principle = await _refTokenService.ValidateToken(refreshToken);
             if (!principle.IsSuccess)
             {
+                if (principle.Code == ErrorCode.ServiceUnavailable)
+                {
+                    return StatusCode(503, new { message = principle.Message });
+                }
                 return Unauthorized(new { message = principle.Message });
             }
             // nếu đoạn principle ok thì cấp lại accesstoken mới cho người dùng
             var userId = principle.Data!.FindFirst(ClaimTypes.NameIdentifier)?.Value;
-            var user = await _workHubContext.Users.FindAsync(userId);
+            var user = await _workHubContext.Users.AsNoTracking().FirstOrDefaultAsync(u => u.UserId == userId);
             if (user == null)
             {
                 return BadRequest(new { message = "Không có người dùng này!" });

@@ -1,4 +1,4 @@
-﻿using backend.DTO;
+using backend.DTO;
 using backend.DTO.FinderProfileDTO;
 using backend.Models;
 using backend.Services.files;
@@ -8,9 +8,7 @@ using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using System.Runtime.CompilerServices;
 using System.Security.Claims;
-
 using System.Text;
-
 
 namespace backend.Controllers
 {
@@ -35,11 +33,10 @@ namespace backend.Controllers
         }
         
         [HttpGet("me")]
-
         public async Task<IActionResult> FinderProfile()
         {
             string currentUserId = getUserId();
-            var profile = await _context.Finderprofiles.AsNoTracking().Include(p =>p.User).FirstOrDefaultAsync(u => u.UserId == currentUserId); // cái này là lấy UserId từ Jwt token, nếu muốn lấy role thì thay nameIdentifier thành roles là được
+            var profile = await _context.Finderprofiles.AsNoTracking().Include(p => p.User).FirstOrDefaultAsync(u => u.UserId == currentUserId);
             if (profile == null)
             {
                 return NotFound("Chưa có hồ sơ");
@@ -57,17 +54,18 @@ namespace backend.Controllers
                 LinkedIn = profile.LinkedIn,
                 Major = profile.Major,
                 Skill = profile.Skill,
-                Email = profile.User.Email
+                Email = profile.User.Email,
+                DateOfBirth = profile.DateOfBirth,
+                Gender = profile.Gender
             };
             return Ok(res);
         }
 
         [HttpPut("me")]
-        [EnableRateLimiting("upload_cv_avt")]
         public async Task<IActionResult> UpdateFinderProfile(FinderProfileRequestDTO dto)
         {
             string currentUserId = getUserId();
-            var profile = await _context.Finderprofiles.FirstOrDefaultAsync(u => u.UserId == currentUserId); // cái này là lấy UserId từ Jwt token, nếu muốn lấy role thì thay nameIdentifier thành roles là được
+            var profile = await _context.Finderprofiles.FirstOrDefaultAsync(u => u.UserId == currentUserId);
             
             if (profile == null)
             {
@@ -83,6 +81,8 @@ namespace backend.Controllers
                     LinkedIn = dto.LinkedIn,
                     Major = dto.Major,
                     Skill = dto.Skill,
+                    DateOfBirth=dto.DateOfBirth,
+                    Gender=dto.Gender
                 };
                 _context.Add(profile);
             }
@@ -97,8 +97,19 @@ namespace backend.Controllers
                 profile.LinkedIn = dto.LinkedIn;
                 profile.Major = dto.Major;
                 profile.Skill = dto.Skill;
+                profile.DateOfBirth = dto.DateOfBirth;
+                profile.Gender = dto.Gender;
             }
-            await _context.SaveChangesAsync();
+
+            try
+            {
+                await _context.SaveChangesAsync();
+            }
+            catch (DbUpdateException)
+            {
+                return Conflict(new { message = "Lỗi cập nhật hồ sơ hoặc xung đột dữ liệu." });
+            }
+
             return Ok(profile);
         }
 
@@ -107,13 +118,13 @@ namespace backend.Controllers
         public async Task<IActionResult> UploadAvatar(IFormFile avatar)
         {
             string currentUserId = getUserId();
-            var profile = await _context.Finderprofiles.Include(p => p.User).FirstOrDefaultAsync(u => u.UserId == currentUserId); // cái này là lấy UserId từ Jwt token, nếu muốn lấy role thì thay nameIdentifier thành roles là được
+            var profile = await _context.Finderprofiles.Include(p => p.User).FirstOrDefaultAsync(u => u.UserId == currentUserId);
             if (profile == null)
             {
                 return NotFound("Chưa có hồ sơ");
             }
             string avatarFolder = $"WorkHub/finder/avatar/{profile.UserId}";
-            string avatarPublicId = $"{avatarFolder}/{profile.User.Username}_Avatar"; //cố định theo user -> upload sau sẽ ghi đè đúng file này, không tạo file mới
+            string avatarPublicId = $"{avatarFolder}/{profile.User.Username}_Avatar";
 
             var result = await _fileUploadService.Upload_CV_AVT(avatar, avatarFolder, avatarPublicId, new[] { ".jpg", ".png" }, 2 * 1024 * 1024);
             if (!result.IsSuccess)
@@ -122,21 +133,31 @@ namespace backend.Controllers
             }
 
             profile.Avatar = result.Url;
-            await _context.SaveChangesAsync();
+            try
+            {
+                await _context.SaveChangesAsync();
+            }
+            catch (Exception)
+            {
+                // TR-1: Rollback xóa file Cloudinary nếu lưu DB thất bại
+                await _fileUploadService.DeleteFileAsync(avatarPublicId);
+                return StatusCode(500, new { message = "Lỗi khi lưu avatar vào cơ sở dữ liệu." });
+            }
             return Ok(result.Url);
         }
 
         [HttpPost("me/cv")]
+        [EnableRateLimiting("upload_cv_avt")]
         public async Task<IActionResult> UploadCV([FromForm]IFormFile cv)
         {
             string currentUserId = getUserId();
-            var profile = await _context.Finderprofiles.Include(p => p.User).FirstOrDefaultAsync(u => u.UserId == currentUserId); // cái này là lấy UserId từ Jwt token, nếu muốn lấy role thì thay nameIdentifier thành roles là được
+            var profile = await _context.Finderprofiles.Include(p => p.User).FirstOrDefaultAsync(u => u.UserId == currentUserId);
             if (profile == null)
             {
                 return NotFound("Chưa có hồ sơ");
             }
             string CVfolder = $"WorkHub/finder/cv/{profile.UserId}";
-            string CVpublicId = $"{CVfolder}/{profile.User.Username}_CV"; //cố định theo user -> upload sau sẽ ghi đè đúng file này, không tạo file mới
+            string CVpublicId = $"{CVfolder}/{profile.User.Username}_CV";
 
             var result = await _fileUploadService.Upload_CV_AVT(cv, CVfolder, CVpublicId, new[] { ".docx", ".pdf" }, 5 * 1024 * 1024, isRaw: true);
             if (!result.IsSuccess)
@@ -145,7 +166,16 @@ namespace backend.Controllers
             }
 
             profile.Cv = result.Url;
-            await _context.SaveChangesAsync();
+            try
+            {
+                await _context.SaveChangesAsync();
+            }
+            catch (Exception)
+            {
+                // TR-1: Rollback xóa file Cloudinary nếu lưu DB thất bại
+                await _fileUploadService.DeleteFileAsync(CVpublicId, isRaw: true);
+                return StatusCode(500, new { message = "Lỗi khi lưu CV vào cơ sở dữ liệu." });
+            }
             return Ok(result.Url);
         }
     }

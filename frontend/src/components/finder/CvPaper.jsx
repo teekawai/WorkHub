@@ -28,6 +28,15 @@ const toBlocks = (str) => {
 const toHref = (url) => (/^https?:\/\//i.test(url) ? url : `https://${url}`)
 const stripProtocol = (url) => url.replace(/^https?:\/\//i, "")
 
+//BE có thể trả "2000-01-31" hoặc "2000-01-31T00:00:00": chỉ lấy phần ngày yyyy-MM-dd (dùng cho <input type="date">)
+const toDateValue = (str) => (str ? String(str).slice(0, 10) : "")
+//yyyy-MM-dd -> dd/MM/yyyy để hiển thị
+const formatDate = (str) => {
+    const [y, m, d] = toDateValue(str).split("-")
+    return y && m && d ? `${d}/${m}/${y}` : ""
+}
+const todayValue = () => new Date().toISOString().slice(0, 10) //ngày sinh không được ở tương lai
+
 const ICONS = {
     phone: <path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72c.13.96.36 1.9.7 2.81a2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45c.91.34 1.85.57 2.81.7A2 2 0 0 1 22 16.92z" />,
     mail: (
@@ -40,6 +49,12 @@ const ICONS = {
         <>
             <path d="M20 10c0 6-8 12-8 12s-8-6-8-12a8 8 0 0 1 16 0z" />
             <circle cx="12" cy="10" r="3" />
+        </>
+    ),
+    cake: (
+        <>
+            <rect x="3" y="4" width="18" height="18" rx="2" />
+            <path d="M16 2v4M8 2v4M3 10h18" />
         </>
     ),
     link: (
@@ -96,7 +111,7 @@ const inputCls = (error) =>
 const headerInputCls = (error) =>
     `${baseInput} bg-white/15 text-3xl font-semibold text-white placeholder:text-blue-100 ${error ? "border-white focus:ring-white/60" : "border-white/60 focus:border-white focus:ring-white/40"}`
 
-//avatar (tùy chọn) = { canChange, busy, onPick(file) }: chỉ có tác dụng khi đang sửa. canChange=false khi hồ sơ chưa tồn tại (BE trả 404)
+//avatar (tùy chọn) = { canChange, busy, error, onPick(file) }: chỉ có tác dụng khi đang sửa. canChange=false khi hồ sơ chưa tồn tại (BE trả 404); error = lỗi upload gần nhất
 function CvPaper({ profile, edit, avatar, ref }) {
     const editing = !!edit
     const avatarInput = useRef(null)
@@ -110,7 +125,7 @@ function CvPaper({ profile, edit, avatar, ref }) {
 
     const blocks = toBlocks(data.experience)
     const hasEducation = !!(data.educationLevel || data.major)
-    const hasContact = !!(data.phone || profile?.email || data.address || data.linkedIn)
+    const hasContact = !!(data.phone || profile?.email || data.birthday || data.address || data.linkedIn)
     const hasMainContent = !!data.description || !!data.skill || blocks.length > 0
 
     return (
@@ -132,7 +147,6 @@ function CvPaper({ profile, edit, avatar, ref }) {
             <div className="absolute left-8 top-12 size-36">
                 <img
                     src={profile?.avatar || defaultAvatar}
-                    crossOrigin="anonymous" //để chụp CV thành PDF không bị chặn ảnh từ Cloudinary
                     alt="Profile photo"
                     className="size-full rounded-full bg-blue-100 object-cover ring-4 ring-white"
                 />
@@ -165,9 +179,14 @@ function CvPaper({ profile, edit, avatar, ref }) {
             <div className="flex flex-1 flex-wrap">
                 {/* cột trái: thông tin ngắn */}
                 <aside className="flex flex-[1_1_240px] flex-col gap-7 bg-blue-50 px-6 pb-8 pt-[72px]">
+                    {editing && avatar?.error && (
+                        <p role="alert" className="-mt-8 text-xs font-medium text-red-600">
+                            {avatar.error}
+                        </p>
+                    )}
                     {editing ? (
                         <>
-                            <Section title="Contact">
+                            <Section title="Personal information">
                                 <div className="flex flex-col gap-3">
                                     <Field label="Phone *" error={errors.phone}>
                                         <input type="tel" autoComplete="tel" placeholder="Phone number" className={inputCls(errors.phone)} {...bind("phone")} />
@@ -177,6 +196,9 @@ function CvPaper({ profile, edit, avatar, ref }) {
                                         <p className="text-sm text-slate-700 [overflow-wrap:anywhere]">{profile?.email || "Taken from your account"}</p>
                                         <p className="mt-1 text-xs text-slate-500">Email comes from your account and can't be changed here.</p>
                                     </div>
+                                    <Field label="Birthday">
+                                        <input type="date" max={todayValue()} className={inputCls()} {...bind("birthday")} />
+                                    </Field>
                                     <Field label="Address">
                                         <input type="text" autoComplete="street-address" placeholder="City, country" className={inputCls()} {...bind("address")} />
                                     </Field>
@@ -200,10 +222,11 @@ function CvPaper({ profile, edit, avatar, ref }) {
                     ) : (
                         <>
                             {hasContact && (
-                                <Section title="Contact">
+                                <Section title="Personal information">
                                     <ul className="flex flex-col gap-3 text-sm text-slate-700">
                                         {data.phone && <ContactRow icon="phone">{data.phone}</ContactRow>}
                                         {profile?.email && <ContactRow icon="mail">{profile.email}</ContactRow>}
+                                        {data.birthday && <ContactRow icon="cake">{formatDate(data.birthday)}</ContactRow>}
                                         {data.address && <ContactRow icon="pin">{data.address}</ContactRow>}
                                         {data.linkedIn && (
                                             <ContactRow icon="link">

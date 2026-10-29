@@ -11,10 +11,11 @@ using System.Security.Claims;
 
 namespace backend.Controllers
 {
+    [ApiController]
     [Route("api/employer")]
     [Authorize(Roles = "employer")]
     
-    public class EmployerController : Controller
+    public class EmployerController : ControllerBase
     {
         private readonly WorkHubContext _context;
         private readonly IFileUploadService _fileUploadService;
@@ -39,11 +40,13 @@ namespace backend.Controllers
                 Address = profile.Address,
                 Description = profile.Description,
                 Website = profile.Website,
+                Logo = profile.Logo,
                 FoundedYear = profile.FoundedYear,
                 TaxCode = profile.TaxCode,
                 Phone = profile.Phone,
                 Email = profile.User.Email,
-                Field = profile.Field
+                Field = profile.Field,
+                IsVerified = profile.IsVerified
             };
             return Ok(res);
         }
@@ -51,7 +54,7 @@ namespace backend.Controllers
 
         /* phần này là update dữ liệu, nếu mà hồ sơ người dùng chưa có dữ liệu thì cho phép thêm mới, còn không thì sửa bình thường */
         [HttpPut("me")]
-        public async Task<IActionResult> UpdateFinderProfile(EmployerProfileReq dto)
+        public async Task<IActionResult> UpdateEmployerProfile(EmployerProfileReq dto)
         {
             string currentUserId = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
             var profile = await _context.Employerprofiles.FirstOrDefaultAsync(u => u.UserId == currentUserId); // cái này là lấy UserId từ Jwt token, nếu muốn lấy role thì thay nameIdentifier thành roles là được
@@ -111,7 +114,7 @@ namespace backend.Controllers
             string logoFolder = $"WorkHub/employer/logo/{profile.UserId}"; //tách theo từng employer, trước đây để chung 1 folder cho mọi employer
             string logoPublicId = $"{logoFolder}/{profile.User.Username}_Logo"; //cố định theo user -> upload sau sẽ ghi đè đúng file này, không tạo file mới
 
-            var result = await _fileUploadService.Upload_CV_AVT(avatar, logoFolder, logoPublicId, new[] { ".jpg", ".png" }, 2 * 1024 * 1024);
+            var result = await _fileUploadService.Upload_CV_AVT(avatar, logoFolder, logoPublicId, new[] { ".jpg", ".png" }, 5 * 1024 * 1024);
             if (!result.IsSuccess)
             {
                 return BadRequest(result.ErrorMessage);

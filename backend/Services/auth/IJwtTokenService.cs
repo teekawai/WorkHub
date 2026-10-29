@@ -25,7 +25,7 @@ namespace backend.Services.auth
         public (string accessToken, string refreshToken) NewToken(User user, bool rememberMe)
         {
             string accessToken = JwtToken(user: user, isAccessToken: true, expire: 15);
-            string refreshToken = JwtToken(user: user, isAccessToken: false, expire: rememberMe ? 60 * 24 * 30 : 15);
+            string refreshToken = JwtToken(user: user, isAccessToken: false, expire: rememberMe ? 60 * 24 * 30 : 60 * 24 * 7);
             return (accessToken, refreshToken);
         }
 

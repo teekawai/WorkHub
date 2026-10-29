@@ -5,8 +5,10 @@ import { loginUser } from "../../api/auth";
 import validateLogin from "../../utils/LoginValidate";
 import auth_banner1 from "../../assets/auth_banner1.png"
 import { ROUTE_PATH } from "../../routes/route"
+import { useAuth } from "../../context/AuthContext"
 
-function Login({ setCurrentUser }) {
+function Login() {
+    const { login } = useAuth()
     const [email, setEmail] = useState("")
     const [password, setPassword] = useState("")
     const [showPassword, setShowPassword] = useState(false)
@@ -33,8 +35,7 @@ function Login({ setCurrentUser }) {
                 role: data.role,
                 accessToken: data.accessToken
             }
-            localStorage.setItem("currentUser", JSON.stringify(currentUser))
-            setCurrentUser(currentUser)
+            login(currentUser) //ghi localStorage + cập nhật AuthContext cùng lúc, thay vì tự setItem + setCurrentUser rời rạc như trước
             navigate(currentUser.role === "finder" ? ROUTE_PATH.FINDER.HOME : ROUTE_PATH.EMPLOYER.HOME)
         } catch (e) {
             setError("Đăng nhập thất bại: " + e.response?.data?.message)
