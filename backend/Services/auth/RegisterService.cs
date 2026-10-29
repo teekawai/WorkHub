@@ -58,7 +58,14 @@ public class RegisterService : INewRegisterService
         };
         //thêm và lưu user vào database
         _context.Users.Add(newUser);
-        await _context.SaveChangesAsync();
-        return ServiceResult<User>.Success(newUser, "Đăng ký thành công");
+        try
+        {
+            await _context.SaveChangesAsync();
+            return ServiceResult<User>.Success(newUser, "Đăng ký thành công");
+        }
+        catch (DbUpdateException)
+        {
+            return ServiceResult<User>.Fail(ErrorCode.Conflict, "Email đã được đăng ký");
+        }
     }
 }

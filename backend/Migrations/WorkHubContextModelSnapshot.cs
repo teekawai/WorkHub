@@ -101,10 +101,8 @@ namespace backend.Migrations
                         .HasColumnType("int")
                         .HasColumnName("foundedYear");
 
-                    b.Property<string>("IsVerified")
-                        .IsRequired()
-                        .HasMaxLength(255)
-                        .HasColumnType("varchar(255)")
+                    b.Property<bool>("IsVerified")
+                        .HasColumnType("tinyint(1)")
                         .HasColumnName("isVerified");
 
                     b.Property<string>("Logo")

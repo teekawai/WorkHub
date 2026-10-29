@@ -1,4 +1,4 @@
-import instance from "./instance";
+import instance from "./instance.js";
 
 //Shape dữ liệu EmployerProfile trả về từ GET /employer/me (khớp EmployerProfileResDTO):
 //{ companyName, logo, address, description, website, field, foundedYear, email, phone, taxCode }

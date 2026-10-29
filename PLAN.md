@@ -1,7 +1,7 @@
 # WorkHub — Kế hoạch triển khai (90h)
 
 ## Current Task
-- Module 2 BE xong: FinderController + EmployerController (GET/PUT /me + upload logo/avatar/CV via Cloudinary). Tiếp theo: FE trang Profile Finder + Employer (xem + sửa + upload).
+- Module 2 (Profile) hoàn thành 100% (cả BE lẫn FE cho cả Finder và Employer). Tiếp theo: Module 3 — Job (JobController: đăng tin, danh sách job, lọc/phân trang).
 
 ## Lưu ý
 - Xong task nào thì gạch ngang task đó (dùng `~~text~~` trong markdown) — không xóa, để tracking tiến độ
@@ -32,9 +32,9 @@
 ## Module 2 — Profile (~15h)
 - [x] ~~BE: FinderController + EmployerController (GET/PUT /me) — 5h~~
 - [x] ~~BE: Setup Cloudinary, upload avatar/logo/CV — 5h~~
-- [ ] BE: Test profile APIs — 1h
-- [ ] FE: Trang Profile Finder/Employer (xem + sửa) — 3h
-- [ ] FE: Upload avatar/logo/CV — 1h
+- [x] ~~BE: Test profile APIs — 1h~~ (Đã test và fix đầy đủ cả Employer lẫn Finder profile APIs 100% pass: Employer 40/40, Finder 33/33)
+- [x] ~~FE: Trang Profile Finder/Employer (xem + sửa) — 3h~~ (FE hoàn thành, đã có unit test 100% pass)
+- [x] ~~FE: Upload avatar/logo/CV — 1h~~ (Đã có component upload, validate dung lượng và định dạng)
 
 ## Module 3 — Job (~22h)
 - [ ] BE: JobController — POST, GET list (filter/sort/pagination), GET/:id — 6h

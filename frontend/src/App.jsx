@@ -1,7 +1,7 @@
-import { useState } from 'react'
 import { Navigate, Route, Routes } from 'react-router-dom'
 import { ROUTE_PATH } from './routes/route'
 import ProtectedRoute from './routes/protectedRoutes'
+import { useAuth } from './context/AuthContext'
 
 import NavBar from './components/shared/NavBar'
 import Login from './pages/auth/Login'
@@ -12,11 +12,12 @@ import GeneralUserHome from './pages/GeneralUserHome'
 import FinderLayout from './components/finder/FinderLayout'
 import FinderProfile from './pages/finder/FinderProfile'
 import FinderApplications from './pages/finder/FinderApplications'
+import EmployerLayout from './components/employer/EmployerLayout'
+import EmployerProfile from './pages/employer/EmployerProfile'
 
 function App() {
-  const [currentUser, setCurrentUser] = useState(() =>
-    JSON.parse(localStorage.getItem('currentUser'))
-  )
+  //currentUser giờ lấy từ AuthContext (nguồn chân lý duy nhất) thay vì tự giữ state + đọc localStorage ở đây
+  const { currentUser } = useAuth()
   const Direct =({currentUser})=>{
     if(!currentUser){
       return <GeneralUserHome currentUser={currentUser} />
@@ -31,8 +32,8 @@ function App() {
   return (
     <Routes>
       {/* Auth */}
-      <Route path={ROUTE_PATH.AUTH.REGISTER} element={<Register setCurrentUser={setCurrentUser} />} />
-      <Route path={ROUTE_PATH.AUTH.LOGIN}    element={<Login    setCurrentUser={setCurrentUser} />} />
+      <Route path={ROUTE_PATH.AUTH.REGISTER} element={<Register />} />
+      <Route path={ROUTE_PATH.AUTH.LOGIN}    element={<Login />} />
 
       {/* Finder */}
       <Route
@@ -70,6 +71,17 @@ function App() {
           </ProtectedRoute>
         }
       />
+
+      {/* Employer workspace: layout có sidebar, các trang con render vào <Outlet /> */}
+      <Route
+        element={
+          <ProtectedRoute role="employer">
+            <EmployerLayout />
+          </ProtectedRoute>
+        }
+      >
+        <Route path={ROUTE_PATH.EMPLOYER.PROFILE} element={<EmployerProfile />} />
+      </Route>
     </Routes>
   )
 }

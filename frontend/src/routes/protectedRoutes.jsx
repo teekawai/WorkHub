@@ -2,12 +2,16 @@ import { useEffect } from "react";
 import toast from "react-hot-toast";
 import { Navigate } from "react-router-dom";
 import { ROUTE_PATH } from "./route";
+import { useAuth } from "../context/AuthContext";
 
 //route này để làm cửa chặn cho các trang yêu cầu đăng nhập và đúng role:
 //- chưa đăng nhập: về trang login
 //- đăng nhập nhưng sai role: về trang home của role mình đang có (không render trang của role khác)
 function ProtectedRoute({ children, role }) {
-    const currentUser = JSON.parse(localStorage.getItem("currentUser"))
+    //đọc currentUser từ AuthContext (nguồn chân lý duy nhất) thay vì tự JSON.parse(localStorage...) riêng ở đây —
+    //trước đây đọc thẳng localStorage nên luôn "may mắn" đúng kể cả khi state App.jsx bị lệch (ví dụ logout thiếu bước setCurrentUser(null)),
+    //nhưng giờ 2 nơi đã dùng chung 1 state nên không còn rủi ro lệch nữa.
+    const { currentUser } = useAuth()
     const isLoggedIn = !!currentUser
     const isWrongRole = isLoggedIn && !!role && currentUser.role !== role
 

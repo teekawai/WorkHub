@@ -7,5 +7,6 @@ namespace backend.Services.files
     {
         // isRaw = true cho file không phải ảnh (vd: CV .pdf/.docx) -> dùng RawUploadParams thay vì ImageUploadParams
         Task<FileUploadResult> Upload_CV_AVT(IFormFile file, string folder, string publicId, string[] allowedExtensions, long maxSize, bool isRaw = false);
+        Task<bool> DeleteFileAsync(string publicId, bool isRaw = false);
     }
 }

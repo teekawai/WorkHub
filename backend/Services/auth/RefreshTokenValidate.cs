@@ -53,7 +53,16 @@ public class RefreshTokenValidate : ITokenValidate
         }
 
         var userId = principle.FindFirst(ClaimTypes.NameIdentifier)?.Value;
-        var token = await _redis.StringGetAsync($"refresh:{userId}");//thay thành getString từ redis
+        RedisValue token;
+        try
+        {
+            token = await _redis.StringGetAsync($"refresh:{userId}");
+        }
+        catch (Exception ex) when (ex is RedisException or RedisConnectionException or TimeoutException)
+        {
+            return ServiceResult<ClaimsPrincipal>.Fail(ErrorCode.ServiceUnavailable, "Dịch vụ xác thực tạm thời không khả dụng, vui lòng thử lại sau.");
+        }
+
         //check xem có trong server redis không
         if (!token.HasValue || token != refreshToken)
         {

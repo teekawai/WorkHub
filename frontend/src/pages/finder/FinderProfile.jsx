@@ -8,10 +8,13 @@ import CvUploadCard from "../../components/finder/CvUploadCard"
 import validateFinderProfile from "../../utils/FinderProfileValidate"
 
 //Các field người dùng được sửa (email và avatar/cv không nằm trong form này)
-const FIELDS = ["fullname", "phone", "address", "linkedIn", "educationLevel", "major", "skill", "description", "experience"]
+const FIELDS = ["fullname", "phone", "birthday", "address", "linkedIn", "educationLevel", "major", "skill", "description", "experience"]
 
-//profile (có thể null / có field null) -> draft toàn chuỗi để gắn vào input
-const toDraft = (profile) => Object.fromEntries(FIELDS.map((f) => [f, profile?.[f] ?? ""]))
+//profile (có thể null / có field null) -> draft toàn chuỗi để gắn vào input. birthday cắt về yyyy-MM-dd cho <input type="date">
+const toDraft = (profile) => ({
+    ...Object.fromEntries(FIELDS.map((f) => [f, profile?.[f] ?? ""])),
+    birthday: (profile?.birthday ?? "").slice(0, 10),
+})
 
 //draft -> body gửi PUT: cắt khoảng trắng, field tùy chọn để trống thì gửi null
 const toPayload = (draft) => ({
@@ -39,6 +42,7 @@ function FinderProfile() {
     const paperRef = useRef(null) //trỏ tới tờ CV để chụp thành PDF
     const [confirm, setConfirm] = useState(null) //null | "save" | "cancel": hộp thoại đang mở
     const [avatarBusy, setAvatarBusy] = useState(false)
+    const [avatarError, setAvatarError] = useState("") //lỗi upload avatar, hiện cố định dưới avatar (toast tự mất nên dễ bỏ sót)
 
     useEffect(() => {
         let cancelled = false //tránh setState khi component đã bị gỡ (hoặc StrictMode chạy effect 2 lần ở dev)
@@ -79,6 +83,7 @@ function FinderProfile() {
         setConfirm(null)
         setIsEditing(false)
         setErrors({})
+        setAvatarError("")
     }
 
     //bấm Cancel: nếu chưa sửa gì thì thoát luôn, có sửa thì hỏi trước
@@ -125,13 +130,19 @@ function FinderProfile() {
 
     //chọn ảnh đại diện: kiểm tra đuôi + dung lượng ngay ở FE, hợp lệ mới gửi lên. Upload xong BE đã tự lưu URL vào DB nên chỉ cần cập nhật state
     const handleAvatarPick = async (file) => {
+        setAvatarError("")
         const ext = file.name.slice(file.name.lastIndexOf(".")).toLowerCase()
         if (!AVATAR_EXT.includes(ext)) {
-            toast.error("Please choose a JPG or PNG image.", { id: "avatar-upload" })
+            const msg = "Please choose a JPG or PNG image."
+            setAvatarError(msg)
+            toast.error(msg, { id: "avatar-upload" })
             return
         }
         if (file.size > AVATAR_MAX_SIZE) {
-            toast.error("The image is too large. The maximum size is 2MB.", { id: "avatar-upload" })
+            const mb = (file.size / 1024 / 1024).toFixed(2)
+            const msg = `This image is ${mb}MB. The maximum size is ${AVATAR_MAX_SIZE / 1024 / 1024}MB.`
+            setAvatarError(msg)
+            toast.error(msg, { id: "avatar-upload" })
             return
         }
         setAvatarBusy(true)
@@ -140,7 +151,11 @@ function FinderProfile() {
             setProfile((p) => ({ ...p, avatar: url }))
             toast.success("Profile photo updated.", { id: "avatar-upload" })
         } catch (err) {
-            toast.error(getProfileMsg(err), { id: "avatar-upload" })
+            //400 từ BE kèm lý do cụ thể (dạng chuỗi) thì hiện luôn lý do đó, còn lại dùng câu chung theo status
+            const beMsg = err.response?.status === 400 && typeof err.response.data === "string" ? err.response.data : null
+            const msg = beMsg || getProfileMsg(err)
+            setAvatarError(msg)
+            toast.error(msg, { id: "avatar-upload" })
         } finally {
             setAvatarBusy(false)
         }
@@ -217,7 +232,7 @@ function FinderProfile() {
                         ref={paperRef}
                         profile={profile}
                         edit={isEditing ? { draft, errors, onChange: handleChange } : undefined}
-                        avatar={isEditing ? { canChange: !!profile, busy: avatarBusy, onPick: handleAvatarPick } : undefined}
+                        avatar={isEditing ? { canChange: !!profile, busy: avatarBusy, error: avatarError, onPick: handleAvatarPick } : undefined}
                     />
 
                     {/* card upload CV: chỉ hiện khi hồ sơ đã tồn tại (BE trả 404 nếu chưa có), nằm trên trên màn nhỏ */}

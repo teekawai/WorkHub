@@ -23,8 +23,9 @@ public partial class Employerprofile
 
     public string Phone { get; set; } = null!;
 
+    
     public string TaxCode { get; set; } = null!;
-    public string IsVerified {get; set;}= null!;
+    public bool IsVerified {get; set;}= false;
 
     public virtual ICollection<Job> Jobs { get; set; } = new List<Job>();
 

@@ -89,7 +89,6 @@ public partial class WorkHubContext : DbContext
                 .HasMaxLength(255)
                 .HasColumnName("address");
             entity.Property(e => e.IsVerified)
-                .HasMaxLength(255)
                 .HasColumnName("isVerified");
             entity.Property(e => e.CompanyName)
                 .HasMaxLength(100)

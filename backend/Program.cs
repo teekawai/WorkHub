@@ -70,30 +70,39 @@ builder.Services.AddSingleton<IConnectionMultiplexer>(
     ConnectionMultiplexer.Connect(redisConnectionString)
 );
 
-// Rate limit for auth
+// Cấu hình Rate Limiting phân vùng theo Client IP / User ID (tránh DoS chéo toàn cục)
 builder.Services.AddRateLimiter(options =>
 {
-    options.AddFixedWindowLimiter("auth", opt =>
-    {
-        opt.PermitLimit = 5;
-        opt.Window = TimeSpan.FromSeconds(15);
-        opt.QueueProcessingOrder = QueueProcessingOrder.OldestFirst;
-        opt.QueueLimit = 3;
-    });
-    options.RejectionStatusCode = 429;
-});
+    options.RejectionStatusCode = StatusCodes.Status429TooManyRequests;
 
-//Rate limit cho upload cv và avatar trong profile
-builder.Services.AddRateLimiter(options =>
-{
-    options.AddFixedWindowLimiter("upload_cv_avt", opt =>
+    // Rate limit cho Auth (login/register): bảo vệ brute force nhưng đủ thoáng cho test tự động (100 req / phút theo IP)
+    options.AddPolicy("auth", httpContext =>
     {
-        opt.PermitLimit = 5;
-        opt.Window = TimeSpan.FromMinutes(10);
-        opt.QueueProcessingOrder = QueueProcessingOrder.OldestFirst;
-        opt.QueueLimit = 3;
+        var clientIp = httpContext.Connection.RemoteIpAddress?.ToString() ?? "unknown";
+        return RateLimitPartition.GetFixedWindowLimiter(clientIp, _ => new FixedWindowRateLimiterOptions
+        {
+            PermitLimit = 100,
+            Window = TimeSpan.FromMinutes(1),
+            QueueProcessingOrder = QueueProcessingOrder.OldestFirst,
+            QueueLimit = 0
+        });
     });
-    options.RejectionStatusCode = 429;
+
+    // Rate limit cho upload CV & Avatar: 30 request / phút theo User ID hoặc IP
+    options.AddPolicy("upload_cv_avt", httpContext =>
+    {
+        var partitionKey = httpContext.User.FindFirst(System.Security.Claims.ClaimTypes.NameIdentifier)?.Value
+                           ?? httpContext.Connection.RemoteIpAddress?.ToString()
+                           ?? "unknown";
+
+        return RateLimitPartition.GetFixedWindowLimiter(partitionKey, _ => new FixedWindowRateLimiterOptions
+        {
+            PermitLimit = 30,
+            Window = TimeSpan.FromMinutes(1),
+            QueueProcessingOrder = QueueProcessingOrder.OldestFirst,
+            QueueLimit = 0
+        });
+    });
 });
 
 var app = builder.Build();

@@ -1,7 +1,7 @@
 import { useRef, useState } from "react"
 import toast from "react-hot-toast"
 import { getProfileMsg, uploadCV } from "../../api/finderProfile"
-import ConfirmDialog from "./ConfirmDialog"
+import ConfirmDialog from "../shared/ConfirmDialog"
 
 const MAX_SIZE = 5 * 1024 * 1024 //BE chỉ nhận ≤ 5MB
 const ALLOWED_EXT = [".pdf", ".docx"] //BE không nhận .doc

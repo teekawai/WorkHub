@@ -29,5 +29,7 @@ namespace backend.DTO.FinderProfileDTO
 
         public string? Skill { get; set; }
         public string Email {get;set;} =null!;
+        public DateTime DateOfBirth {get; set;}
+        public string? Gender{get; set;}
     }
 }
