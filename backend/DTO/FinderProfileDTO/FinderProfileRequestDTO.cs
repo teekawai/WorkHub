@@ -31,7 +31,7 @@ namespace backend.DTO.FinderProfileDTO
         public string? Major { get; set; }
 
         public string? Skill { get; set; }
-        public DateTime DateOfBirth {get; set;}
+        public DateTime? DateOfBirth {get; set;}
         public string? Gender{get; set;}
 
     }
