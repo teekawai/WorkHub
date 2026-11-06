@@ -12,6 +12,14 @@ namespace backend.Services.auth
         public (string accessToken, string refreshToken) NewToken(User user, bool rememberMe);
     }
 
+    // tên + giá trị claim phân biệt access token và refresh token (cùng key/issuer/audience nên phải dựa vào claim này)
+    public static class TokenTypes
+    {
+        public const string ClaimName = "token_type";
+        public const string Access = "access";
+        public const string Refresh = "refresh";
+    }
+
     public class JwtService : IJwtTokenService
     {
         private readonly IConfiguration _configuration;
@@ -32,7 +40,12 @@ namespace backend.Services.auth
         public string JwtToken(User user, bool isAccessToken, int expire) 
         {
             //khai báo claim: Claims là các mẩu thông tin bạn muốn nhúng vào token, để sau này Middleware/Controller khác đọc ra mà không cần query lại DB.
-            var claims = new List<Claim> { new Claim(ClaimTypes.NameIdentifier, user.UserId) };
+            var claims = new List<Claim>
+            {
+                new Claim(ClaimTypes.NameIdentifier, user.UserId),
+                // đánh dấu loại token: Program.cs chỉ nhận "access" làm Bearer, RefreshTokenValidate chỉ nhận "refresh"
+                new Claim(TokenTypes.ClaimName, isAccessToken ? TokenTypes.Access : TokenTypes.Refresh)
+            };
             if(isAccessToken) claims.Add(new Claim(ClaimTypes.Role, user.Role)); // thêm cái claim role vào để sau này còn validate role
             
             //key( vẫn giống với lúc đăng kí dịch vụ jwt thôi), có key để bảo mật cc j cái jwt này á

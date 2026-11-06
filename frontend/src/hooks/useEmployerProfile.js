@@ -7,6 +7,7 @@ import {
     uploadLogo,
 } from "../api/employerProfile"
 import validateEmployerProfile from "../utils/EmployerProfileValidate"
+import { useAuth } from "../context/AuthContext"
 
 //Các field người dùng được sửa qua form (email chỉ đọc, logo có luồng upload riêng)
 const FIELDS = ["companyName", "address", "description", "website", "field", "foundedYear", "phone", "taxCode"]
@@ -30,6 +31,7 @@ const LOGO_EXT = [".jpg", ".png"] //BE không nhận .jpeg
 //Hook ôm toàn bộ state + logic của trang Company Profile: load/edit/save/upload logo.
 //status: loading | empty (BE 404, chưa có hồ sơ) | ready | error — copy 4 trạng thái của Finder.
 function useEmployerProfile() {
+    const { updateUser } = useAuth() //logo công ty hiển thị ở NavBar thay cho avatar
     const [profile, setProfile] = useState(null)
     const [status, setStatus] = useState("loading")
     const [errorMsg, setErrorMsg] = useState("")
@@ -54,6 +56,7 @@ function useEmployerProfile() {
                 } else {
                     setProfile(data)
                     setStatus("ready")
+                    updateUser({ avatar: data.logo ?? null }) //user đăng nhập từ trước / đổi logo ở máy khác -> NavBar vẫn đúng
                 }
             } catch (err) {
                 if (cancelled) return
@@ -65,7 +68,7 @@ function useEmployerProfile() {
         return () => {
             cancelled = true
         }
-    }, [reloadKey])
+    }, [reloadKey, updateUser])
 
     const retry = () => {
         setStatus("loading")
@@ -148,6 +151,7 @@ function useEmployerProfile() {
         try {
             const url = await uploadLogo(file)
             setProfile((p) => ({ ...p, logo: url }))
+            updateUser({ avatar: url })
             toast.success("Company logo updated.", { id: "logo-upload" })
         } catch (err) {
             //400 từ BE kèm lý do cụ thể (dạng chuỗi) thì hiện luôn lý do đó, còn lại dùng câu chung theo status

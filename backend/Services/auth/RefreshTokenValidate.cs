@@ -14,12 +14,14 @@ public class RefreshTokenValidate : ITokenValidate
     private readonly WorkHubContext _context;
     private readonly IConfiguration _configuration;
     private readonly StackExchange.Redis.IDatabase _redis;
+    private readonly ILogger<RefreshTokenValidate> _logger;
 
-    public RefreshTokenValidate(WorkHubContext context, IConfiguration configuration, IConnectionMultiplexer _redis)
+    public RefreshTokenValidate(WorkHubContext context, IConfiguration configuration, IConnectionMultiplexer _redis, ILogger<RefreshTokenValidate> logger)
     {
         this._context = context;
         this._configuration = configuration;
         this._redis = _redis.GetDatabase();
+        this._logger = logger;
     }
 
     public async Task<ServiceResult<ClaimsPrincipal>> ValidateToken(string refreshToken)
@@ -49,7 +51,14 @@ public class RefreshTokenValidate : ITokenValidate
         }
         catch (Exception e)
         {
-            return ServiceResult<ClaimsPrincipal>.Fail(ErrorCode.Unauthorized, "RefreshToken không hợp lệ hoặc có lỗi trong quá trình xử lí: " + e.Message);
+            _logger.LogWarning(e, "Refresh token validation failed");
+            return ServiceResult<ClaimsPrincipal>.Fail(ErrorCode.Unauthorized, "Refresh token không hợp lệ");
+        }
+
+        // chặn dùng access token để gọi /refresh
+        if (principle.FindFirst(TokenTypes.ClaimName)?.Value != TokenTypes.Refresh)
+        {
+            return ServiceResult<ClaimsPrincipal>.Fail(ErrorCode.Unauthorized, "Refresh token không hợp lệ");
         }
 
         var userId = principle.FindFirst(ClaimTypes.NameIdentifier)?.Value;
