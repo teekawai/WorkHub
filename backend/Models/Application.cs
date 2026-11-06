@@ -11,11 +11,11 @@ public partial class Application
 
     public string JobId { get; set; } = null!;
 
-    public string Status { get; set; } = null!;
+    public string Status { get; set; } = null!;//trạng thái chờ/từ chối/tuyển
 
-    public DateTime AppliedAt { get; set; }
+    public DateTime AppliedAt { get; set; }// thời gian nộp đơn ứng tuyển
 
-    public string? CoverLetter { get; set; }
+    public string? CoverLetter { get; set; } //coverletter
 
 
     public virtual Finderprofile Finder { get; set; } = null!;

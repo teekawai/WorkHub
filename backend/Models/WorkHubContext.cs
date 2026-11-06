@@ -70,7 +70,7 @@ public partial class WorkHubContext : DbContext
 
             entity.HasOne(d => d.Job).WithMany(p => p.Applications)
                 .HasForeignKey(d => d.JobId)
-                .OnDelete(DeleteBehavior.ClientSetNull)
+                .OnDelete(DeleteBehavior.Cascade)
                 .HasConstraintName("fk_application_job");
         });
 
@@ -193,18 +193,31 @@ public partial class WorkHubContext : DbContext
             entity.Property(e => e.Category)
                 .HasMaxLength(255)
                 .HasColumnName("category");
-            entity.Property(e => e.ExperienceRequired)
+            entity.Property(e => e.SubCategory)
                 .HasMaxLength(255)
-                .HasColumnName("experienceRequired");
+                .HasColumnName("subCategory");
+            entity.Property(e => e.YearOfExperience)
+                .HasColumnName("yearOfExperience");
             entity.Property(e => e.Description)
                 .HasColumnType("text")
                 .HasColumnName("description");
             entity.Property(e => e.EmployerId)
                 .HasMaxLength(36)
                 .HasColumnName("employerId");
-            entity.Property(e => e.IsNegotiable)
-                .HasColumnType("bit(1)")
-                .HasColumnName("isNegotiable");
+            entity.OwnsOne(e => e.Salary, salary =>
+            {
+                salary.Property(s => s.SalaryType)
+                    .HasConversion<string>()
+                    .HasMaxLength(20)
+                    .HasColumnName("salaryType");
+                salary.Property(s => s.SalaryMin)
+                    .HasColumnType("decimal(18,2)")
+                    .HasColumnName("salaryMin");
+                salary.Property(s => s.SalaryMax)
+                    .HasColumnType("decimal(18,2)")
+                    .HasColumnName("salaryMax");
+                salary.ToTable(t => t.HasCheckConstraint("chk_job_salary_min_max", "salaryMin IS NULL OR salaryMax IS NULL OR salaryMin <= salaryMax"));
+            });
             entity.Property(e => e.JobTitle)
                 .HasMaxLength(255)
                 .HasColumnName("jobTitle");
@@ -215,7 +228,6 @@ public partial class WorkHubContext : DbContext
             entity.Property(e => e.Requirement)
                 .HasColumnType("text")
                 .HasColumnName("requirement");
-            entity.Property(e => e.Salary).HasColumnName("salary");
             entity.Property(e => e.SkillRequired)
                 .HasMaxLength(255)
                 .HasColumnName("skillRequired");
