@@ -38,6 +38,9 @@ export const getEmployerProfileMsg = (err) => {
             case 413: {
                 return "The file is too large."
             }
+            case 429: {
+                return "Too many requests. Please wait a minute and try again."
+            }
             case 500: {
                 return "Something went wrong on our side. Please try again later."
             }
