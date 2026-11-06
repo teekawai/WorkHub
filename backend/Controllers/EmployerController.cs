@@ -89,14 +89,6 @@ namespace backend.Controllers
             //sửa
             else
             {
-                var duplicateName = await _context.Employerprofiles
-                    .AnyAsync(e => e.CompanyName == dto.CompanyName && e.UserId != currentUserId);
-                if (duplicateName) return Conflict(new { message = "Tên công ty đã tồn tại" });
-
-                var duplicateTax = await _context.Employerprofiles
-                    .AnyAsync(e => e.TaxCode == dto.TaxCode && e.UserId != currentUserId);
-                if (duplicateTax) return Conflict(new { message = "Mã số thuế đã tồn tại" });
-
                 //đã verify thì khóa companyName + taxCode (định danh pháp lý được xác minh), FE luôn gửi cả form nên chỉ chặn khi giá trị thật sự khác
                 if (profile.IsVerified)
                 {
