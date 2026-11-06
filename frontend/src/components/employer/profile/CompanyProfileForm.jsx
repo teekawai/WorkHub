@@ -9,7 +9,7 @@ import defaultLogo from "../../../assets/avt-macdinh.webp" //giống CompanyHead
 //props:
 //  profile: hồ sơ hiện tại (dùng để lấy email readonly + logo hiện có) — có thể null khi tạo mới
 //  draft, errors, onChange: y hệt FormField cần (onChange(name, value))
-//  logo: { canChange, busy, error, onPick(file) } — canChange=false khi profile chưa tồn tại (BE 404); error = lỗi upload gần nhất (chuỗi rỗng nếu không có)
+//  logo: { canChange, busy, error, onPick(file) } — canChange luôn true (EmployerProfile đã tự tạo hồ sơ trước nếu chưa có); error = lỗi upload gần nhất (chuỗi rỗng nếu không có)
 function CompanyProfileForm({ profile, draft, errors, onChange, logo }) {
     const logoInput = useRef(null)
     //đã verify thì BE khóa companyName + taxCode (định danh pháp lý đã xác minh) -> FE để readonly cho khớp
@@ -40,18 +40,16 @@ function CompanyProfileForm({ profile, draft, errors, onChange, logo }) {
                     <button
                         type="button"
                         onClick={() => logoInput.current?.click()}
-                        disabled={!logo.canChange || logo.busy}
+                        disabled={logo.busy}
                         aria-label="Change company logo"
                         className="absolute inset-0 flex items-center justify-center rounded-xl bg-slate-900/50 px-1 text-center text-[11px] font-medium leading-tight text-white opacity-0 transition-opacity group-hover:opacity-100 focus-visible:opacity-100 disabled:cursor-not-allowed disabled:opacity-100 disabled:bg-slate-900/0"
                     >
-                        {logo.busy ? "Uploading…" : logo.canChange ? "Change logo" : ""}
+                        {logo.busy ? "Uploading…" : "Change logo"}
                     </button>
                 </div>
                 <div className="min-w-0">
                     <p className="text-sm font-medium text-slate-900">Company logo</p>
-                    <p className="mt-0.5 text-xs text-slate-500">
-                        {logo.canChange ? "JPG or PNG, up to 2MB." : "Save your profile first to add a logo."}
-                    </p>
+                    <p className="mt-0.5 text-xs text-slate-500">JPG or PNG, up to 2MB.</p>
                     {logo.error && (
                         <p role="alert" className="mt-1.5 text-xs font-medium text-red-600">
                             {logo.error}

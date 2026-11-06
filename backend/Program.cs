@@ -39,6 +39,18 @@ builder.Services.AddAuthentication(option =>
         ValidAudience = builder.Configuration["JWT:Audience"],
         IssuerSigningKey = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(builder.Configuration["JWT:Key"] ?? throw new Exception("thiếu jwt key")))
     };
+    // refresh token ký cùng key/issuer/audience -> phải chặn bằng claim token_type, chỉ access token mới được dùng làm Bearer
+    options.Events = new JwtBearerEvents
+    {
+        OnTokenValidated = context =>
+        {
+            if (context.Principal?.FindFirst(TokenTypes.ClaimName)?.Value != TokenTypes.Access)
+            {
+                context.Fail("Token không phải access token");
+            }
+            return Task.CompletedTask;
+        }
+    };
 });
 
 builder.Services.AddAuthorization(options =>
@@ -85,6 +97,16 @@ builder.Services.AddSingleton<IConnectionMultiplexer>(
 builder.Services.AddRateLimiter(options =>
 {
     options.RejectionStatusCode = StatusCodes.Status429TooManyRequests;
+    // trả JSON { message } + Retry-After để FE hiện đúng lý do thay vì lỗi chung
+    options.OnRejected = async (context, cancellationToken) =>
+    {
+        if (context.Lease.TryGetMetadata(MetadataName.RetryAfter, out var retryAfter))
+        {
+            context.HttpContext.Response.Headers.RetryAfter = ((int)retryAfter.TotalSeconds).ToString();
+        }
+        await context.HttpContext.Response.WriteAsJsonAsync(
+            new { message = "Too many requests. Please try again later." }, cancellationToken);
+    };
 
     // Rate limit cho Auth (login/register): bảo vệ brute force nhưng đủ thoáng cho test tự động (100 req / phút theo IP)
     options.AddPolicy("auth", httpContext =>
@@ -128,11 +150,14 @@ else
     app.UseHttpsRedirection();
 }
 
-app.UseRateLimiter();
-
+// thứ tự quan trọng:
+// - CORS trước rate limiter -> response 429 vẫn có header CORS, trình duyệt không báo nhầm thành lỗi CORS
+// - Authentication trước rate limiter -> policy "upload_cv_avt" đọc được UserId để chia giới hạn theo user thay vì theo IP
 app.UseCors("CORS");
 
 app.UseAuthentication();
+
+app.UseRateLimiter();
 
 app.UseAuthorization();
 

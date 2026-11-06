@@ -30,11 +30,13 @@ namespace backend.Controllers
         private readonly ITokenValidate _refTokenService;
         private readonly IGoogleAuthService _googleAuthService;
         private readonly IDatabase _redis;
+        private readonly ILogger<AuthController> _logger;
 
         public AuthController(WorkHubContext context, IConfiguration _configuration,
             IJwtTokenService _jwtTokenService, UserRepository _repo,
             ILoginService _loginService, INewRegisterService _registerService,
-            ITokenValidate refTokenService, IGoogleAuthService googleAuthService, IConnectionMultiplexer _redis)
+            ITokenValidate refTokenService, IGoogleAuthService googleAuthService, IConnectionMultiplexer _redis,
+            ILogger<AuthController> logger)
         {
             this._workHubContext = context;
             this._configuration = _configuration;
@@ -45,6 +47,7 @@ namespace backend.Controllers
             this._refTokenService = refTokenService;
             this._googleAuthService = googleAuthService;
             this._redis = _redis.GetDatabase();
+            this._logger = logger;
         }
 
         [HttpPost("register")]
@@ -81,13 +84,26 @@ namespace backend.Controllers
             return accessToken;
         }
 
+        //ảnh hiển thị trên NavBar: finder lấy avatar, employer lấy logo công ty (null nếu chưa có hồ sơ/ảnh)
+        private async Task<string?> GetAvatar(User user)
+        {
+            return user.Role == "employer"
+                ? await _workHubContext.Employerprofiles.Where(e => e.UserId == user.UserId).Select(e => e.Logo).FirstOrDefaultAsync()
+                : await _workHubContext.Finderprofiles.Where(f => f.UserId == user.UserId).Select(f => f.Avatar).FirstOrDefaultAsync();
+        }
+
         [HttpPost("google")]
         public async Task<IActionResult> GoogleAuth([FromBody] GoogleLoginDTO dto)
         {
             var result = await _googleAuthService.AuthenticateAsync(dto);
             if (!result.IsSuccess)
             {
-                return Unauthorized(new { message = result.Message });
+                return result.Code switch
+                {
+                    ErrorCode.BadRequest => BadRequest(new { message = result.Message }),
+                    ErrorCode.Conflict => Conflict(new { message = result.Message }),
+                    _ => Unauthorized(new { message = result.Message })
+                };
             }
 
             var user = result.Data!;
@@ -98,6 +114,7 @@ namespace backend.Controllers
                 UserId = user.UserId,
                 Email = user.Email,
                 Role = user.Role,
+                Avatar = await GetAvatar(user),
             });
         }
 
@@ -125,13 +142,14 @@ namespace backend.Controllers
                 //hàm chung này tự tạo access + refresh token, lưu refresh vào redis, và set cookie refreshToken
                 accessToken = await CreateJwtToken(dto.rememberMe, user);
             }
-            catch (RedisConnectionException ex)
+            catch (RedisException ex)   // RedisException bao luôn ConnectionException + Timeout
             {
-                return StatusCode(503, new { message = "The service is temporarily unavailable. Please try again later.(" + ex + ")" });
+                _logger.LogError(ex, "Redis error during login");
+                return StatusCode(503, new { message = "The service is temporarily unavailable. Please try again later." });
             }
 
             //return dữ liệu vào local cho phía fe
-            return Ok(new { accessToken, user.Email, user.UserId, user.Role });
+            return Ok(new { accessToken, user.Email, user.UserId, user.Role, Avatar = await GetAvatar(user) });
         }
 
         [HttpPost("refresh")]
@@ -181,7 +199,7 @@ namespace backend.Controllers
             catch (RedisException ex)
             {
                 //ghi lỗi ở server, không trả chi tiết lỗi Redis về cho client
-                Console.Error.WriteLine($"Redis error during logout: {ex.Message}");
+                _logger.LogError(ex, "Redis error during logout");
                 return StatusCode(503, new { message = "The service is temporarily unavailable. Please try again later." });
             }
 

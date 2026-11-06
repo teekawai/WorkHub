@@ -16,6 +16,12 @@ export const loginUser = (async (data)=>{
     return res.data
 })
 
+//đăng nhập/đăng ký bằng Google — BE tự FindOrCreate theo email trong token, role chỉ dùng khi tạo user mới
+export const googleAuth = (async (data)=>{
+    const res = await publicClient.post("/auth/google", data)
+    return res.data
+})
+
 export const refreshToken =(async (data)=>{
     const res = await publicClient.post("/auth/refresh")
     return res.data

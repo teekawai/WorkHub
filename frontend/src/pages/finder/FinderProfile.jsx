@@ -6,14 +6,15 @@ import ConfirmDialog from "../../components/shared/ConfirmDialog"
 import Button from "../../components/shared/Button"
 import CvUploadCard from "../../components/finder/CvUploadCard"
 import validateFinderProfile from "../../utils/FinderProfileValidate"
+import { useAuth } from "../../context/AuthContext"
 
 //Các field người dùng được sửa (email và avatar/cv không nằm trong form này)
-const FIELDS = ["fullname", "phone", "birthday", "address", "linkedIn", "educationLevel", "major", "skill", "description", "experience"]
+const FIELDS = ["fullname", "phone", "dateOfBirth", "gender", "address", "linkedIn", "educationLevel", "major", "skill", "description", "experience"]
 
-//profile (có thể null / có field null) -> draft toàn chuỗi để gắn vào input. birthday cắt về yyyy-MM-dd cho <input type="date">
+//profile (có thể null / có field null) -> draft toàn chuỗi để gắn vào input. dateOfBirth cắt về yyyy-MM-dd cho <input type="date">
 const toDraft = (profile) => ({
     ...Object.fromEntries(FIELDS.map((f) => [f, profile?.[f] ?? ""])),
-    birthday: (profile?.birthday ?? "").slice(0, 10),
+    dateOfBirth: (profile?.dateOfBirth ?? "").slice(0, 10),
 })
 
 //draft -> body gửi PUT: cắt khoảng trắng, field tùy chọn để trống thì gửi null
@@ -30,6 +31,7 @@ const AVATAR_EXT = [".jpg", ".png"] //BE không nhận .jpeg
 
 //Trang Profile. Trạng thái tải: loading / empty (user mới, BE trả 404) / ready / error. Thêm chế độ sửa (isEditing)
 function FinderProfile() {
+    const { updateUser } = useAuth() //đồng bộ avatar lên NavBar
     const [profile, setProfile] = useState(null)
     const [status, setStatus] = useState("loading")
     const [errorMsg, setErrorMsg] = useState("")
@@ -55,6 +57,7 @@ function FinderProfile() {
                 } else {
                     setProfile(data)
                     setStatus("ready")
+                    updateUser({ avatar: data.avatar ?? null }) //user đăng nhập từ trước / đổi ảnh ở máy khác -> NavBar vẫn đúng
                 }
             } catch (err) {
                 if (cancelled) return
@@ -66,7 +69,7 @@ function FinderProfile() {
         return () => {
             cancelled = true
         }
-    }, [reloadKey])
+    }, [reloadKey, updateUser])
 
     const retry = () => {
         setStatus("loading")
@@ -128,7 +131,9 @@ function FinderProfile() {
         }
     }
 
-    //chọn ảnh đại diện: kiểm tra đuôi + dung lượng ngay ở FE, hợp lệ mới gửi lên. Upload xong BE đã tự lưu URL vào DB nên chỉ cần cập nhật state
+    //chọn ảnh đại diện: kiểm tra đuôi + dung lượng ngay ở FE, hợp lệ mới gửi lên. Nếu hồ sơ chưa tồn tại (profile null, đang tạo lần đầu),
+    //BE 404 nếu upload avatar trước khi có row -> âm thầm tạo trước 1 row bằng chính draft hiện tại (có thể còn rỗng, không phải null —
+    //các cột NOT NULL chấp nhận chuỗi rỗng), rồi mới upload. User vẫn còn trong isEditing, làm tiếp form bình thường.
     const handleAvatarPick = async (file) => {
         setAvatarError("")
         const ext = file.name.slice(file.name.lastIndexOf(".")).toLowerCase()
@@ -145,10 +150,29 @@ function FinderProfile() {
             toast.error(msg, { id: "avatar-upload" })
             return
         }
+        if (!profile) {
+            //chưa có hồ sơ -> sắp tạo row trước khi upload, phải validate y hệt askSave() vì BE có [Required]/[RegularExpression]
+            //(đặc biệt Phone: bắt buộc đúng định dạng 0xxxxxxxxx) -> gửi draft chưa hợp lệ sẽ bị 400 ở tầng ModelState
+            const found = validateFinderProfile(draft)
+            if (Object.keys(found).length > 0) {
+                setErrors(found)
+                toast.error("Please fill in Full name and Phone (valid format) before adding a photo.", { id: "avatar-upload" })
+                return
+            }
+        }
         setAvatarBusy(true)
         try {
+            if (!profile) {
+                await updateFinderProfile(toPayload(draft)) //tạo row trước (upsert, draft đã qua validate ở trên)
+                const created = await getFinderProfile()
+                if (created) {
+                    setProfile(created)
+                    setStatus("ready") //row đã thật sự tồn tại trong DB, không còn "empty" nữa
+                }
+            }
             const url = await uploadAvatar(file)
             setProfile((p) => ({ ...p, avatar: url }))
+            updateUser({ avatar: url })
             toast.success("Profile photo updated.", { id: "avatar-upload" })
         } catch (err) {
             //400 từ BE kèm lý do cụ thể (dạng chuỗi) thì hiện luôn lý do đó, còn lại dùng câu chung theo status
@@ -232,7 +256,7 @@ function FinderProfile() {
                         ref={paperRef}
                         profile={profile}
                         edit={isEditing ? { draft, errors, onChange: handleChange } : undefined}
-                        avatar={isEditing ? { canChange: !!profile, busy: avatarBusy, error: avatarError, onPick: handleAvatarPick } : undefined}
+                        avatar={isEditing ? { canChange: true, busy: avatarBusy, error: avatarError, onPick: handleAvatarPick } : undefined}
                     />
 
                     {/* card upload CV: chỉ hiện khi hồ sơ đã tồn tại (BE trả 404 nếu chưa có), nằm trên trên màn nhỏ */}
