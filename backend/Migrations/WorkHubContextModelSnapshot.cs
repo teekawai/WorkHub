@@ -233,8 +233,8 @@ namespace backend.Migrations
                         .HasColumnType("datetime")
                         .HasColumnName("createdAt");
 
-                    b.Property<DateTime>("Deadline")
-                        .HasColumnType("datetime")
+                    b.Property<DateOnly>("Deadline")
+                        .HasColumnType("date")
                         .HasColumnName("deadline");
 
                     b.Property<string>("Description")

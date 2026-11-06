@@ -188,7 +188,7 @@ public partial class WorkHubContext : DbContext
                 .HasColumnType("datetime")
                 .HasColumnName("createdAt");
             entity.Property(e => e.Deadline)
-                .HasColumnType("datetime")
+                .HasColumnType("date")
                 .HasColumnName("deadline");
             entity.Property(e => e.Category)
                 .HasMaxLength(255)

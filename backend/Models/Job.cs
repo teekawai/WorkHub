@@ -33,7 +33,7 @@ public partial class Job
     public int YearOfExperience { get; set; } // số năm kinh nghiệm
     public string ApplicantBenefit { get; set; } = null!;
 
-    public DateTime Deadline { get; set; }//thời gian hết job
+    public DateOnly Deadline { get; set; }//ngày hết hạn theo lịch VN, còn hạn hết ngày này (Business 1.6, 2.3)
 
     public string WorkType { get; set; } = null!;//hình thức làm việc: onboard/remote/hybrid
 
