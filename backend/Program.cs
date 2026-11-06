@@ -1,9 +1,11 @@
+using backend.Authorization;
 using backend.Models;
 using backend.Repositories;
 using backend.Services.auth;
 using backend.Services.files;
 using CloudinaryDotNet;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.RateLimiting;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.IdentityModel.Tokens;
@@ -39,6 +41,14 @@ builder.Services.AddAuthentication(option =>
     };
 });
 
+builder.Services.AddAuthorization(options =>
+{
+    options.AddPolicy("VerifiedEmployer", policy =>
+        policy.RequireAuthenticatedUser()
+              .RequireRole("employer")
+              .AddRequirements(new VerifiedEmployerRequirement()));
+});
+
 builder.Services.AddCors(option =>
 {
     option.AddPolicy("CORS", policy =>
@@ -65,6 +75,7 @@ builder.Services.AddScoped<INewRegisterService, RegisterService>();
 builder.Services.AddScoped<ITokenValidate, RefreshTokenValidate>();
 builder.Services.AddScoped<IFileUploadService, FileUploadService>();
 builder.Services.AddScoped<IGoogleAuthService, GoogleAuthService>();
+builder.Services.AddScoped<IAuthorizationHandler, VerifiedEmployerHandler>();
 builder.Services.AddHttpContextAccessor();
 builder.Services.AddSingleton<IConnectionMultiplexer>(
     ConnectionMultiplexer.Connect(redisConnectionString)

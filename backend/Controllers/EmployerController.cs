@@ -88,6 +88,15 @@ namespace backend.Controllers
                     .AnyAsync(e => e.TaxCode == dto.TaxCode && e.UserId != currentUserId);
                 if (duplicateTax) return Conflict(new { message = "Mã số thuế đã tồn tại" });
 
+                //đã verify thì khóa companyName + taxCode (định danh pháp lý được xác minh), FE luôn gửi cả form nên chỉ chặn khi giá trị thật sự khác
+                if (profile.IsVerified)
+                {
+                    if (dto.CompanyName != profile.CompanyName)
+                        return Conflict(new { message = "Your company is verified, so the company name can't be changed. Please contact support." });
+                    if (dto.TaxCode != profile.TaxCode)
+                        return Conflict(new { message = "Your company is verified, so the tax code can't be changed. Please contact support." });
+                }
+
                 profile.CompanyName = dto.CompanyName;
                 profile.Address = dto.Address;
                 profile.Description = dto.Description;
