@@ -248,16 +248,6 @@ namespace backend.Migrations
                         .HasColumnType("varchar(36)")
                         .HasColumnName("employerId");
 
-                    b.Property<string>("ExperienceRequired")
-                        .IsRequired()
-                        .HasMaxLength(255)
-                        .HasColumnType("varchar(255)")
-                        .HasColumnName("experienceRequired");
-
-                    b.Property<ulong>("IsNegotiable")
-                        .HasColumnType("bit(1)")
-                        .HasColumnName("isNegotiable");
-
                     b.Property<string>("JobTitle")
                         .IsRequired()
                         .HasMaxLength(255)
@@ -279,10 +269,6 @@ namespace backend.Migrations
                         .HasColumnType("text")
                         .HasColumnName("requirement");
 
-                    b.Property<int?>("Salary")
-                        .HasColumnType("int")
-                        .HasColumnName("salary");
-
                     b.Property<string>("SkillRequired")
                         .HasMaxLength(255)
                         .HasColumnType("varchar(255)")
@@ -294,11 +280,20 @@ namespace backend.Migrations
                         .HasColumnType("varchar(20)")
                         .HasColumnName("status");
 
+                    b.Property<string>("SubCategory")
+                        .HasMaxLength(255)
+                        .HasColumnType("varchar(255)")
+                        .HasColumnName("subCategory");
+
                     b.Property<string>("WorkType")
                         .IsRequired()
                         .HasMaxLength(20)
                         .HasColumnType("varchar(20)")
                         .HasColumnName("workType");
+
+                    b.Property<int>("YearOfExperience")
+                        .HasColumnType("int")
+                        .HasColumnName("yearOfExperience");
 
                     b.HasKey("JobId")
                         .HasName("PRIMARY");
@@ -387,6 +382,7 @@ namespace backend.Migrations
                     b.HasOne("backend.Models.Job", "Job")
                         .WithMany("Applications")
                         .HasForeignKey("JobId")
+                        .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired()
                         .HasConstraintName("fk_application_job");
 
@@ -425,7 +421,40 @@ namespace backend.Migrations
                         .IsRequired()
                         .HasConstraintName("fk_job_employer");
 
+                    b.OwnsOne("backend.Models.Salary", "Salary", b1 =>
+                        {
+                            b1.Property<string>("JobId")
+                                .HasColumnType("varchar(36)");
+
+                            b1.Property<decimal?>("SalaryMax")
+                                .HasColumnType("decimal(18,2)")
+                                .HasColumnName("salaryMax");
+
+                            b1.Property<decimal?>("SalaryMin")
+                                .HasColumnType("decimal(18,2)")
+                                .HasColumnName("salaryMin");
+
+                            b1.Property<string>("SalaryType")
+                                .IsRequired()
+                                .HasMaxLength(20)
+                                .HasColumnType("varchar(20)")
+                                .HasColumnName("salaryType");
+
+                            b1.HasKey("JobId");
+
+                            b1.ToTable("job", t =>
+                                {
+                                    t.HasCheckConstraint("chk_job_salary_min_max", "salaryMin IS NULL OR salaryMax IS NULL OR salaryMin <= salaryMax");
+                                });
+
+                            b1.WithOwner()
+                                .HasForeignKey("JobId");
+                        });
+
                     b.Navigation("Employer");
+
+                    b.Navigation("Salary")
+                        .IsRequired();
                 });
 
             modelBuilder.Entity("backend.Models.RefreshToken", b =>
