@@ -111,7 +111,7 @@ const inputCls = (error) =>
 const headerInputCls = (error) =>
     `${baseInput} bg-white/15 text-3xl font-semibold text-white placeholder:text-blue-100 ${error ? "border-white focus:ring-white/60" : "border-white/60 focus:border-white focus:ring-white/40"}`
 
-//avatar (tùy chọn) = { canChange, busy, error, onPick(file) }: chỉ có tác dụng khi đang sửa. canChange=false khi hồ sơ chưa tồn tại (BE trả 404); error = lỗi upload gần nhất
+//avatar (tùy chọn) = { canChange, busy, error, onPick(file) }: chỉ có tác dụng khi đang sửa. canChange luôn true (FinderProfile đã tự tạo hồ sơ trước nếu chưa có); error = lỗi upload gần nhất
 function CvPaper({ profile, edit, avatar, ref }) {
     const editing = !!edit
     const avatarInput = useRef(null)
@@ -125,7 +125,7 @@ function CvPaper({ profile, edit, avatar, ref }) {
 
     const blocks = toBlocks(data.experience)
     const hasEducation = !!(data.educationLevel || data.major)
-    const hasContact = !!(data.phone || profile?.email || data.birthday || data.address || data.linkedIn)
+    const hasContact = !!(data.phone || profile?.email || data.dateOfBirth || data.address || data.linkedIn)
     const hasMainContent = !!data.description || !!data.skill || blocks.length > 0
 
     return (
@@ -166,11 +166,11 @@ function CvPaper({ profile, edit, avatar, ref }) {
                         <button
                             type="button"
                             onClick={() => avatarInput.current?.click()}
-                            disabled={!avatar.canChange || avatar.busy}
+                            disabled={avatar.busy}
                             aria-label="Change profile photo"
                             className="absolute inset-0 flex items-center justify-center rounded-full bg-slate-900/50 px-4 text-center text-xs font-medium text-white opacity-0 transition-opacity hover:opacity-100 focus-visible:opacity-100 disabled:cursor-not-allowed disabled:opacity-100"
                         >
-                            {avatar.busy ? "Uploading…" : avatar.canChange ? "Change photo" : "Save your profile first to add a photo"}
+                            {avatar.busy ? "Uploading…" : "Change photo"}
                         </button>
                     </>
                 )}
@@ -197,7 +197,7 @@ function CvPaper({ profile, edit, avatar, ref }) {
                                         <p className="mt-1 text-xs text-slate-500">Email comes from your account and can't be changed here.</p>
                                     </div>
                                     <Field label="Birthday">
-                                        <input type="date" max={todayValue()} className={inputCls()} {...bind("birthday")} />
+                                        <input type="date" max={todayValue()} className={inputCls()} {...bind("dateOfBirth")} />
                                     </Field>
                                     <Field label="Address">
                                         <input type="text" autoComplete="street-address" placeholder="City, country" className={inputCls()} {...bind("address")} />
@@ -226,7 +226,7 @@ function CvPaper({ profile, edit, avatar, ref }) {
                                     <ul className="flex flex-col gap-3 text-sm text-slate-700">
                                         {data.phone && <ContactRow icon="phone">{data.phone}</ContactRow>}
                                         {profile?.email && <ContactRow icon="mail">{profile.email}</ContactRow>}
-                                        {data.birthday && <ContactRow icon="cake">{formatDate(data.birthday)}</ContactRow>}
+                                        {data.dateOfBirth && <ContactRow icon="cake">{formatDate(data.dateOfBirth)}</ContactRow>}
                                         {data.address && <ContactRow icon="pin">{data.address}</ContactRow>}
                                         {data.linkedIn && (
                                             <ContactRow icon="link">

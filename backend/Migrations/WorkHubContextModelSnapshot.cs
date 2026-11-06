@@ -158,7 +158,7 @@ namespace backend.Migrations
                         .HasColumnType("varchar(255)")
                         .HasColumnName("CV");
 
-                    b.Property<DateTime>("DateOfBirth")
+                    b.Property<DateTime?>("DateOfBirth")
                         .HasMaxLength(255)
                         .HasColumnType("datetime(6)")
                         .HasColumnName("dateOfBirth");
