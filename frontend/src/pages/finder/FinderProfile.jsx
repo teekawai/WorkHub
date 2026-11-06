@@ -6,6 +6,7 @@ import ConfirmDialog from "../../components/shared/ConfirmDialog"
 import Button from "../../components/shared/Button"
 import CvUploadCard from "../../components/finder/CvUploadCard"
 import validateFinderProfile from "../../utils/FinderProfileValidate"
+import { useAuth } from "../../context/AuthContext"
 
 //Các field người dùng được sửa (email và avatar/cv không nằm trong form này)
 const FIELDS = ["fullname", "phone", "birthday", "address", "linkedIn", "educationLevel", "major", "skill", "description", "experience"]
@@ -30,6 +31,7 @@ const AVATAR_EXT = [".jpg", ".png"] //BE không nhận .jpeg
 
 //Trang Profile. Trạng thái tải: loading / empty (user mới, BE trả 404) / ready / error. Thêm chế độ sửa (isEditing)
 function FinderProfile() {
+    const { updateUser } = useAuth() //đồng bộ avatar lên NavBar
     const [profile, setProfile] = useState(null)
     const [status, setStatus] = useState("loading")
     const [errorMsg, setErrorMsg] = useState("")
@@ -55,6 +57,7 @@ function FinderProfile() {
                 } else {
                     setProfile(data)
                     setStatus("ready")
+                    updateUser({ avatar: data.avatar ?? null }) //user đăng nhập từ trước / đổi ảnh ở máy khác -> NavBar vẫn đúng
                 }
             } catch (err) {
                 if (cancelled) return
@@ -66,7 +69,7 @@ function FinderProfile() {
         return () => {
             cancelled = true
         }
-    }, [reloadKey])
+    }, [reloadKey, updateUser])
 
     const retry = () => {
         setStatus("loading")
@@ -149,6 +152,7 @@ function FinderProfile() {
         try {
             const url = await uploadAvatar(file)
             setProfile((p) => ({ ...p, avatar: url }))
+            updateUser({ avatar: url })
             toast.success("Profile photo updated.", { id: "avatar-upload" })
         } catch (err) {
             //400 từ BE kèm lý do cụ thể (dạng chuỗi) thì hiện luôn lý do đó, còn lại dùng câu chung theo status
