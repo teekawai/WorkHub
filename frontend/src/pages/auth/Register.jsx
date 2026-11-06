@@ -4,8 +4,13 @@ import { getRegisterUser } from "../../api/auth";
 import validate from "../../utils/RegisterValidate";
 import auth_banner1 from "../../assets/auth_banner1.png"
 import { ROUTE_PATH } from "../../routes/route"
+import { useAuth } from "../../context/AuthContext"
+import GoogleRoleModal from "../../components/shared/GoogleRoleModal"
 
 function Register() {
+    const { login } = useAuth()
+    const [showEmailForm, setShowEmailForm] = useState(false) //landing: chọn "Google" hay "Đăng ký bằng email" trước, false = đang ở landing
+    const [showGoogleModal, setShowGoogleModal] = useState(false)
     const [username, setUsername] = useState("")
     const [email, setEmail] = useState("")
     const [password, setPassword] = useState("")
@@ -17,6 +22,13 @@ function Register() {
     const [error, setError] = useState("")
     const [showConfirm, setShowConfirm] = useState(false)
     const navigate = useNavigate()
+
+    //dùng chung cho cả đăng ký/đăng nhập Google: lưu user + điều hướng theo role BE trả về
+    const handleGoogleSuccess = (currentUser) => {
+        setShowGoogleModal(false)
+        login(currentUser)
+        navigate(currentUser.role === "finder" ? ROUTE_PATH.FINDER.HOME : ROUTE_PATH.EMPLOYER.HOME)
+    }
 
     const handleRegister = async (e) => {
         e.preventDefault()
@@ -53,8 +65,56 @@ function Register() {
                         <span className="text-[#155DFC] px-0.5">Hub</span>
                     </a>
 
+                    {!showEmailForm ? (
+                        <div className="mt-10">
+                            <div className="rounded-2xl border border-[#E5E7EB] bg-white p-6 shadow-[0_1px_2px_rgba(16,24,40,0.04)]">
+                                <h3 className="text-xl font-semibold text-[#111827] text-center">Chào mừng đến WorkHub</h3>
+                                <p className="mt-1.5 text-[13.5px] text-[#6B7280] text-center">Tìm kiếm cơ hội nghề nghiệp phù hợp với bạn</p>
+
+                                <button
+                                    type="button"
+                                    onClick={() => setShowGoogleModal(true)}
+                                    className="w-full h-11 mt-6 text-[15px] font-medium rounded-xl bg-white border border-[#E5E7EB] text-[#374151] flex items-center justify-center gap-2.5 transition-all duration-200 hover:bg-[#F9FAFB] active:scale-[0.98]"
+                                >
+                                    <svg width="18" height="18" viewBox="0 0 48 48"><path fill="#FFC107" d="M43.6 20.5H42V20H24v8h11.3c-1.6 4.7-6.1 8-11.3 8-6.6 0-12-5.4-12-12s5.4-12 12-12c3.1 0 5.9 1.2 8 3.1l5.7-5.7C34.5 6.1 29.5 4 24 4 12.9 4 4 12.9 4 24s8.9 20 20 20 20-8.9 20-20c0-1.3-.1-2.7-.4-3.5z" /><path fill="#FF3D00" d="M6.3 14.7l6.6 4.8C14.5 15.9 18.9 13 24 13c3.1 0 5.9 1.2 8 3.1l5.7-5.7C34.5 6.1 29.5 4 24 4c-7.7 0-14.3 4.4-17.7 10.7z" /><path fill="#4CAF50" d="M24 44c5.4 0 10.3-2.1 14-5.5l-6.5-5.3c-2 1.4-4.6 2.3-7.5 2.3-5.2 0-9.6-3.3-11.3-8l-6.6 5.1C9.6 39.6 16.2 44 24 44z" /><path fill="#1976D2" d="M43.6 20.5H42V20H24v8h11.3c-.8 2.3-2.3 4.3-4.2 5.7l6.5 5.3C40.8 36.4 44 30.9 44 24c0-1.3-.1-2.7-.4-3.5z" /></svg>
+                                    Tiếp tục với Google
+                                </button>
+
+                                <div className="flex items-center gap-3 mt-5">
+                                    <div className="h-px flex-1 bg-[#E5E7EB]" />
+                                    <span className="text-[12px] text-[#9CA3AF]">HOẶC</span>
+                                    <div className="h-px flex-1 bg-[#E5E7EB]" />
+                                </div>
+
+                                <button
+                                    type="button"
+                                    onClick={() => setShowEmailForm(true)}
+                                    className="w-full mt-5 text-left rounded-xl border border-[#E5E7EB] p-4 transition-all duration-200 hover:border-[#155DFC]/40 hover:bg-[#155DFC]/5"
+                                >
+                                    <p className="text-[14.5px] font-medium text-[#111827]">Đăng ký bằng email</p>
+                                    <p className="mt-0.5 text-[12.5px] text-[#6B7280]">Tiếp tục chọn vai trò và điền thông tin đăng ký</p>
+                                </button>
+                            </div>
+
+                            <p className="text-[13.5px] text-[#6B7280] mt-5 text-center">
+                                Đã có tài khoản?{" "}
+                                <Link to={ROUTE_PATH.AUTH.LOGIN} className="text-[#155DFC] font-medium hover:underline underline-offset-2">
+                                    Đăng nhập
+                                </Link>
+                            </p>
+                        </div>
+                    ) : (
+                    <>
                     <div className="mt-10">
-                        <h3 className="text-[28px] sm:text-3xl font-semibold text-[#111827] tracking-tight leading-tight">
+                        <button
+                            type="button"
+                            onClick={() => setShowEmailForm(false)}
+                            className="inline-flex items-center gap-1.5 text-[13px] text-[#6B7280] hover:text-[#155DFC] transition-colors"
+                        >
+                            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polyline points="15 18 9 12 15 6" /></svg>
+                            Quay lại
+                        </button>
+                        <h3 className="mt-3 text-[28px] sm:text-3xl font-semibold text-[#111827] tracking-tight leading-tight">
                             Tạo tài khoản
                         </h3>
                         <p className="mt-2 text-[15px] text-[#6B7280] leading-relaxed">
@@ -189,8 +249,17 @@ function Register() {
                             </Link>
                         </p>
                     </form>
+                    </>
+                    )}
                 </div>
             </div>
+
+            <GoogleRoleModal
+                open={showGoogleModal}
+                onClose={() => setShowGoogleModal(false)}
+                onAuthenticated={handleGoogleSuccess}
+                rememberMe={false}
+            />
 
             <div className="hidden md:block relative h-[100dvh] overflow-hidden p-3">
                 <div className="relative w-full h-full rounded-[1.75rem] overflow-hidden ring-1 ring-black/5">
