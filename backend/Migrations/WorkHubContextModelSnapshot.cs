@@ -342,6 +342,10 @@ namespace backend.Migrations
                         .HasColumnType("varchar(100)")
                         .HasColumnName("email");
 
+                    b.Property<bool>("EmailVerified")
+                        .HasColumnType("tinyint(1)")
+                        .HasColumnName("emailVerified");
+
                     b.Property<string>("PasswordHash")
                         .HasMaxLength(255)
                         .HasColumnType("varchar(255)")

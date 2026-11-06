@@ -259,6 +259,8 @@ public partial class WorkHubContext : DbContext
             entity.Property(e => e.PasswordHash)
                 .HasMaxLength(255)
                 .HasColumnName("passwordHash");
+            entity.Property(e => e.EmailVerified)
+                .HasColumnName("emailVerified");
             entity.Property(e => e.Role)
                 .HasMaxLength(20)
                 .HasColumnName("role");

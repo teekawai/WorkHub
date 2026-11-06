@@ -6,6 +6,7 @@ import validateLogin from "../../utils/LoginValidate";
 import auth_banner1 from "../../assets/auth_banner1.png"
 import { ROUTE_PATH } from "../../routes/route"
 import { useAuth } from "../../context/AuthContext"
+import GoogleRoleModal from "../../components/shared/GoogleRoleModal"
 
 function Login() {
     const { login } = useAuth()
@@ -15,7 +16,14 @@ function Login() {
     const [rememberMe, setRememberMe] = useState(false)
     const [loading, setLoading] = useState(false)
     const [error, setError] = useState("")
+    const [showGoogleModal, setShowGoogleModal] = useState(false)
     const navigate = useNavigate()
+
+    //dùng chung cho cả login thường và login Google: lưu user + điều hướng theo role
+    const handleAuthSuccess = (currentUser) => {
+        login(currentUser)
+        navigate(currentUser.role === "finder" ? ROUTE_PATH.FINDER.HOME : ROUTE_PATH.EMPLOYER.HOME)
+    }
 
     const handleLogin = async (e) => {
         e.preventDefault()
@@ -36,8 +44,7 @@ function Login() {
                 role: data.role,
                 accessToken: data.accessToken
             }
-            login(currentUser) //ghi localStorage + cập nhật AuthContext cùng lúc, thay vì tự setItem + setCurrentUser rời rạc như trước
-            navigate(currentUser.role === "finder" ? ROUTE_PATH.FINDER.HOME : ROUTE_PATH.EMPLOYER.HOME)
+            handleAuthSuccess(currentUser) //ghi localStorage + cập nhật AuthContext cùng lúc, thay vì tự setItem + setCurrentUser rời rạc như trước
         } catch (e) {
             setError("Đăng nhập thất bại: " + e.response?.data?.message)
         } finally {
@@ -133,6 +140,21 @@ function Login() {
                             {loading ? "Đang xử lý..." : "Đăng nhập"}
                         </button>
 
+                        <div className="flex items-center gap-3 mt-6">
+                            <div className="h-px flex-1 bg-[#E5E7EB]" />
+                            <span className="text-[12px] text-[#9CA3AF]">HOẶC</span>
+                            <div className="h-px flex-1 bg-[#E5E7EB]" />
+                        </div>
+
+                        <button
+                            type="button"
+                            onClick={() => setShowGoogleModal(true)}
+                            className="w-full h-11 mt-4 text-[15px] font-medium rounded-xl bg-white border border-[#E5E7EB] text-[#374151] flex items-center justify-center gap-2.5 transition-all duration-200 hover:bg-[#F9FAFB] active:scale-[0.98]"
+                        >
+                            <svg width="18" height="18" viewBox="0 0 48 48"><path fill="#FFC107" d="M43.6 20.5H42V20H24v8h11.3c-1.6 4.7-6.1 8-11.3 8-6.6 0-12-5.4-12-12s5.4-12 12-12c3.1 0 5.9 1.2 8 3.1l5.7-5.7C34.5 6.1 29.5 4 24 4 12.9 4 4 12.9 4 24s8.9 20 20 20 20-8.9 20-20c0-1.3-.1-2.7-.4-3.5z" /><path fill="#FF3D00" d="M6.3 14.7l6.6 4.8C14.5 15.9 18.9 13 24 13c3.1 0 5.9 1.2 8 3.1l5.7-5.7C34.5 6.1 29.5 4 24 4c-7.7 0-14.3 4.4-17.7 10.7z" /><path fill="#4CAF50" d="M24 44c5.4 0 10.3-2.1 14-5.5l-6.5-5.3c-2 1.4-4.6 2.3-7.5 2.3-5.2 0-9.6-3.3-11.3-8l-6.6 5.1C9.6 39.6 16.2 44 24 44z" /><path fill="#1976D2" d="M43.6 20.5H42V20H24v8h11.3c-.8 2.3-2.3 4.3-4.2 5.7l6.5 5.3C40.8 36.4 44 30.9 44 24c0-1.3-.1-2.7-.4-3.5z" /></svg>
+                            Đăng nhập bằng Google
+                        </button>
+
                         <p className="text-[13.5px] text-[#6B7280] mt-5 text-center">
                             Chưa có tài khoản?{" "}
                             <Link to={ROUTE_PATH.AUTH.REGISTER} className="text-[#155DFC] font-medium hover:underline underline-offset-2">
@@ -142,6 +164,13 @@ function Login() {
                     </form>
                 </div>
             </div>
+
+            <GoogleRoleModal
+                open={showGoogleModal}
+                onClose={() => setShowGoogleModal(false)}
+                onAuthenticated={(currentUser) => { setShowGoogleModal(false); handleAuthSuccess(currentUser) }}
+                rememberMe={rememberMe}
+            />
 
             <div className="hidden md:block relative h-[100dvh] overflow-hidden p-3">
                 <div className="relative w-full h-full rounded-[1.75rem] overflow-hidden ring-1 ring-black/5">

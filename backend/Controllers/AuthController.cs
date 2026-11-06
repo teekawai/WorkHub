@@ -98,7 +98,12 @@ namespace backend.Controllers
             var result = await _googleAuthService.AuthenticateAsync(dto);
             if (!result.IsSuccess)
             {
-                return Unauthorized(new { message = result.Message });
+                return result.Code switch
+                {
+                    ErrorCode.BadRequest => BadRequest(new { message = result.Message }),
+                    ErrorCode.Conflict => Conflict(new { message = result.Message }),
+                    _ => Unauthorized(new { message = result.Message })
+                };
             }
 
             var user = result.Data!;
