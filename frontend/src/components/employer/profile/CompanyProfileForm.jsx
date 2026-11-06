@@ -12,6 +12,9 @@ import defaultLogo from "../../../assets/avt-macdinh.webp" //giống CompanyHead
 //  logo: { canChange, busy, error, onPick(file) } — canChange luôn true (EmployerProfile đã tự tạo hồ sơ trước nếu chưa có); error = lỗi upload gần nhất (chuỗi rỗng nếu không có)
 function CompanyProfileForm({ profile, draft, errors, onChange, logo }) {
     const logoInput = useRef(null)
+    //đã verify thì BE khóa companyName + taxCode (định danh pháp lý đã xác minh) -> FE để readonly cho khớp
+    const verified = !!profile?.isVerified
+    const lockedHint = verified ? "Verified — contact support to change this." : undefined
 
     return (
         <div className="flex flex-col gap-6">
@@ -61,6 +64,8 @@ function CompanyProfileForm({ profile, draft, errors, onChange, logo }) {
                 value={draft.companyName}
                 onChange={onChange}
                 error={errors.companyName}
+                readOnly={verified}
+                hint={lockedHint}
                 placeholder="Your company's name"
             />
 
@@ -100,6 +105,8 @@ function CompanyProfileForm({ profile, draft, errors, onChange, logo }) {
                     value={draft.taxCode}
                     onChange={onChange}
                     error={errors.taxCode}
+                    readOnly={verified}
+                    hint={lockedHint}
                     placeholder="Business tax code"
                 />
             </div>
