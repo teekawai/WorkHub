@@ -123,7 +123,7 @@ function NavBar({ currentUser, transparent = false, isEmployer = false }) {
                                 className="flex items-center gap-2 h-9 pl-3 pr-1.5 rounded-full bg-white/15 hover:bg-white/25 transition-colors duration-150 cursor-pointer border border-white/20"
                             >
                                 <span className="text-xs text-white font-medium hidden sm:block whitespace-nowrap">
-                                    {currentUser.username}
+                                    {currentUser.email}
                                 </span>
                                 <img
                                     src={currentUser.avatar || defaultAvatar}

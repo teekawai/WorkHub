@@ -31,7 +31,8 @@ function Login() {
             const data = await loginUser({ email, password, rememberMe })
             const currentUser = {
                 userId: data.userId,
-                username: data.username,
+                email: data.email, //BE không trả username -> NavBar hiển thị email
+                avatar: data.avatar, //finder: avatar, employer: logo công ty (null nếu chưa có)
                 role: data.role,
                 accessToken: data.accessToken
             }

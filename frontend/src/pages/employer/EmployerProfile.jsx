@@ -87,7 +87,7 @@ function EmployerProfile() {
                                 draft={draft}
                                 errors={errors}
                                 onChange={handleChange}
-                                logo={{ canChange: !!profile, busy: logoBusy, error: logoError, onPick: handleLogoPick }}
+                                logo={{ canChange: true, busy: logoBusy, error: logoError, onPick: handleLogoPick }}
                             />
 
                             <div className="mt-8 flex justify-end gap-2 border-t border-slate-100 pt-6">
