@@ -59,6 +59,15 @@ namespace backend.Controllers
             string currentUserId = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
             var profile = await _context.Employerprofiles.FirstOrDefaultAsync(u => u.UserId == currentUserId); // cái này là lấy UserId từ Jwt token, nếu muốn lấy role thì thay nameIdentifier thành roles là được
 
+            //check trùng cho cả tạo mới lẫn sửa (trước đây chỉ check ở nhánh sửa -> tạo mới bị trùng tax code / 500 khi trùng tên)
+            var duplicateName = await _context.Employerprofiles
+                .AnyAsync(e => e.CompanyName == dto.CompanyName && e.UserId != currentUserId);
+            if (duplicateName) return Conflict(new { message = "This company name is already in use." });
+
+            var duplicateTax = await _context.Employerprofiles
+                .AnyAsync(e => e.TaxCode == dto.TaxCode && e.UserId != currentUserId);
+            if (duplicateTax) return Conflict(new { message = "This tax code is already in use." });
+
             //không thấy profile thì thêm mới
             if (profile == null)
             {
@@ -80,14 +89,6 @@ namespace backend.Controllers
             //sửa
             else
             {
-                var duplicateName = await _context.Employerprofiles
-                    .AnyAsync(e => e.CompanyName == dto.CompanyName && e.UserId != currentUserId);
-                if (duplicateName) return Conflict(new { message = "Tên công ty đã tồn tại" });
-
-                var duplicateTax = await _context.Employerprofiles
-                    .AnyAsync(e => e.TaxCode == dto.TaxCode && e.UserId != currentUserId);
-                if (duplicateTax) return Conflict(new { message = "Mã số thuế đã tồn tại" });
-
                 profile.CompanyName = dto.CompanyName;
                 profile.Address = dto.Address;
                 profile.Description = dto.Description;
@@ -97,7 +98,16 @@ namespace backend.Controllers
                 profile.Phone = dto.Phone;
                 profile.Field = dto.Field;
             }
-            await _context.SaveChangesAsync();
+
+            try
+            {
+                await _context.SaveChangesAsync();
+            }
+            catch (DbUpdateException)
+            {
+                //2 request cùng lúc lọt qua bước check trùng -> unique index companyName chặn lại, trả 409 thay vì 500
+                return Conflict(new { message = "This company name is already in use." });
+            }
             return Ok(profile);
         }
 
