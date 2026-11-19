@@ -18,14 +18,14 @@ public class RegisterService : INewRegisterService
         //validate dữ liệu
         if (dto == null)
         {
-            return ServiceResult<User>.Fail(ErrorCode.NotFound, "Dữ liệu không hợp lệ");
+            return ServiceResult<User>.Fail(ErrorCode.BadRequest, "Dữ liệu không hợp lệ");
         }
 
         if (string.IsNullOrEmpty(dto.Username) ||
         string.IsNullOrEmpty(dto.Password) ||
         string.IsNullOrEmpty(dto.Email))
         {
-            return ServiceResult<User>.Fail(ErrorCode.NotFound, "Hãy điền đầy đủ thông tin");
+            return ServiceResult<User>.Fail(ErrorCode.BadRequest, "Hãy điền đầy đủ thông tin");
         }
 
         var existEmail = await _context.Users.FirstOrDefaultAsync(u => u.Email == dto.Email);

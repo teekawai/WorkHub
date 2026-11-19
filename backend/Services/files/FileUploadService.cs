@@ -55,7 +55,7 @@ namespace backend.Services.files
             if (uploadResult.Error != null)
             {
                 Console.WriteLine($"[Cloudinary upload error] {uploadResult.Error.Message}"); //xem ở cửa sổ chạy dotnet
-                return FileUploadResult.Fail($"Lưu file không thành công: {uploadResult.Error.Message}");
+                return FileUploadResult.Fail("Lưu file không thành công, vui lòng thử lại"); // chi tiết lỗi Cloudinary chỉ log ở server
             }
 
             return FileUploadResult.Ok(uploadResult.SecureUrl.ToString());

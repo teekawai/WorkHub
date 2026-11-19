@@ -22,7 +22,8 @@ namespace backend.DTO.EmployerDTO
         [MaxLength(50, ErrorMessage = "Lĩnh vực không được vượt quá 50 ký tự")]
         public string Field { get; set; } = null!;
 
-        [Range(1800, 2026, ErrorMessage = "Năm thành lập phải từ 1800 đến năm hiện tại")]
+        // cận trên (năm hiện tại theo giờ VN) kiểm tra trong EmployerController, attribute chỉ nhận hằng số
+        [Range(1800, int.MaxValue, ErrorMessage = "Năm thành lập phải từ 1800 đến năm hiện tại")]
         public int? FoundedYear { get; set; }
 
         [Required(ErrorMessage = "Không bỏ trống")]

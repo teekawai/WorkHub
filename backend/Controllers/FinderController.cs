@@ -1,3 +1,4 @@
+using backend.Common;
 using backend.DTO;
 using backend.DTO.FinderProfileDTO;
 using backend.Models;
@@ -39,7 +40,7 @@ namespace backend.Controllers
             var profile = await _context.Finderprofiles.AsNoTracking().Include(p => p.User).FirstOrDefaultAsync(u => u.UserId == currentUserId);
             if (profile == null)
             {
-                return NotFound("Chưa có hồ sơ");
+                return NotFound(new ApiError(ApiErrorCodes.NotFound, "Chưa có hồ sơ"));
             }
             var res = new FinderProfileResponseDTO
             {
@@ -107,7 +108,7 @@ namespace backend.Controllers
             }
             catch (DbUpdateException)
             {
-                return Conflict(new { message = "Lỗi cập nhật hồ sơ hoặc xung đột dữ liệu." });
+                return Conflict(new ApiError(ApiErrorCodes.Conflict, "Lỗi cập nhật hồ sơ hoặc xung đột dữ liệu"));
             }
 
             return Ok(profile);
@@ -121,7 +122,7 @@ namespace backend.Controllers
             var profile = await _context.Finderprofiles.Include(p => p.User).FirstOrDefaultAsync(u => u.UserId == currentUserId);
             if (profile == null)
             {
-                return NotFound("Chưa có hồ sơ");
+                return NotFound(new ApiError(ApiErrorCodes.NotFound, "Chưa có hồ sơ"));
             }
             string avatarFolder = $"WorkHub/finder/avatar/{profile.UserId}";
             string avatarPublicId = $"{avatarFolder}/{profile.User.Username}_Avatar";
@@ -129,7 +130,7 @@ namespace backend.Controllers
             var result = await _fileUploadService.Upload_CV_AVT(avatar, avatarFolder, avatarPublicId, new[] { ".jpg", ".png" }, 2 * 1024 * 1024);
             if (!result.IsSuccess)
             {
-                return BadRequest(result.ErrorMessage);
+                return BadRequest(new ApiError(ApiErrorCodes.ValidationError, result.ErrorMessage!));
             }
 
             profile.Avatar = result.Url;
@@ -141,7 +142,7 @@ namespace backend.Controllers
             {
                 // TR-1: Rollback xóa file Cloudinary nếu lưu DB thất bại
                 await _fileUploadService.DeleteFileAsync(avatarPublicId);
-                return StatusCode(500, new { message = "Lỗi khi lưu avatar vào cơ sở dữ liệu." });
+                return StatusCode(500, new ApiError(ApiErrorCodes.InternalError, "Lỗi khi lưu avatar vào cơ sở dữ liệu"));
             }
             return Ok(result.Url);
         }
@@ -154,7 +155,7 @@ namespace backend.Controllers
             var profile = await _context.Finderprofiles.Include(p => p.User).FirstOrDefaultAsync(u => u.UserId == currentUserId);
             if (profile == null)
             {
-                return NotFound("Chưa có hồ sơ");
+                return NotFound(new ApiError(ApiErrorCodes.NotFound, "Chưa có hồ sơ"));
             }
             string CVfolder = $"WorkHub/finder/cv/{profile.UserId}";
             string CVpublicId = $"{CVfolder}/{profile.User.Username}_CV";
@@ -162,7 +163,7 @@ namespace backend.Controllers
             var result = await _fileUploadService.Upload_CV_AVT(cv, CVfolder, CVpublicId, new[] { ".docx", ".pdf" }, 5 * 1024 * 1024, isRaw: true);
             if (!result.IsSuccess)
             {
-                return BadRequest(result.ErrorMessage);
+                return BadRequest(new ApiError(ApiErrorCodes.ValidationError, result.ErrorMessage!));
             }
 
             profile.Cv = result.Url;
@@ -174,7 +175,7 @@ namespace backend.Controllers
             {
                 // TR-1: Rollback xóa file Cloudinary nếu lưu DB thất bại
                 await _fileUploadService.DeleteFileAsync(CVpublicId, isRaw: true);
-                return StatusCode(500, new { message = "Lỗi khi lưu CV vào cơ sở dữ liệu." });
+                return StatusCode(500, new ApiError(ApiErrorCodes.InternalError, "Lỗi khi lưu CV vào cơ sở dữ liệu"));
             }
             return Ok(result.Url);
         }

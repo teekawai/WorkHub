@@ -82,6 +82,9 @@ public partial class WorkHubContext : DbContext
 
             entity.HasIndex(e => e.CompanyName, "companyName").IsUnique();
 
+            // chặn 2 request lưu cùng mã số thuế lọt qua bước check trùng ở EmployerController
+            entity.HasIndex(e => e.TaxCode, "taxCode").IsUnique();
+
             entity.Property(e => e.UserId)
                 .HasMaxLength(36)
                 .HasColumnName("userId");
@@ -90,6 +93,9 @@ public partial class WorkHubContext : DbContext
                 .HasColumnName("address");
             entity.Property(e => e.IsVerified)
                 .HasColumnName("isVerified");
+            entity.Property(e => e.UnverifyReason)
+                .HasMaxLength(500)
+                .HasColumnName("unverifyReason");
             entity.Property(e => e.CompanyName)
                 .HasMaxLength(100)
                 .HasColumnName("companyName");
@@ -178,6 +184,9 @@ public partial class WorkHubContext : DbContext
 
             entity.HasIndex(e => e.EmployerId, "fk_job_employer");
 
+            // search công khai (Open + còn hạn — Business 6.2) và auto-close (Open + quá hạn — 2.3) đều lọc theo 2 cột này
+            entity.HasIndex(e => new { e.Status, e.Deadline }, "ix_job_status_deadline");
+
             entity.Property(e => e.JobId)
                 .HasMaxLength(36)
                 .HasColumnName("jobId");
@@ -233,6 +242,7 @@ public partial class WorkHubContext : DbContext
                 .HasColumnName("skillRequired");
             entity.Property(e => e.Status)
                 .HasMaxLength(20)
+                .IsConcurrencyToken() // Business 2.4.1: đóng/xóa đồng thời không ghi đè Status
                 .HasColumnName("status");
             entity.Property(e => e.WorkType)
                 .HasMaxLength(20)
