@@ -11,7 +11,7 @@ const fileNameFromUrl = (url) => {
     try {
         return decodeURIComponent(url.split("?")[0].split("/").pop())
     } catch {
-        return "Your CV"
+        return "CV của bạn"
     }
 }
 
@@ -31,7 +31,7 @@ function CvUploadCard({ cvUrl, onUploaded }) {
         try {
             const url = await uploadCV(file) //BE trả về URL của file
             onUploaded(url)
-            toast.success("Your CV has been uploaded.", { id: "cv-upload" })
+            toast.success("Đã tải CV của bạn lên.", { id: "cv-upload" })
         } catch (err) {
             toast.error(getProfileMsg(err), { id: "cv-upload" })
         } finally {
@@ -46,11 +46,11 @@ function CvUploadCard({ cvUrl, onUploaded }) {
 
         const ext = file.name.slice(file.name.lastIndexOf(".")).toLowerCase()
         if (!ALLOWED_EXT.includes(ext)) {
-            toast.error("Please choose a PDF or DOCX file.", { id: "cv-upload" })
+            toast.error("Vui lòng chọn tệp PDF hoặc DOCX.", { id: "cv-upload" })
             return
         }
         if (file.size > MAX_SIZE) {
-            toast.error("The file is too large. The maximum size is 5MB.", { id: "cv-upload" })
+            toast.error("Tệp quá lớn. Dung lượng tối đa là 5MB.", { id: "cv-upload" })
             return
         }
 
@@ -60,39 +60,39 @@ function CvUploadCard({ cvUrl, onUploaded }) {
 
     return (
         <section className="rounded-2xl bg-white p-5 ring-1 ring-slate-200">
-            <h2 className="text-lg font-semibold text-slate-900">CV for applications</h2>
-            <p className="mt-1 text-sm text-slate-600">This is the CV employers see when you apply for a job.</p>
+            <h2 className="text-lg font-semibold text-slate-900">CV dùng để ứng tuyển</h2>
+            <p className="mt-1 text-sm text-slate-600">Đây là CV nhà tuyển dụng sẽ thấy khi bạn ứng tuyển.</p>
 
             <div className="mt-4 rounded-lg bg-slate-50 p-3">
                 {cvUrl ? (
                     <>
-                        <p className="text-xs font-medium text-slate-500">Current CV</p>
+                        <p className="text-xs font-medium text-slate-500">CV hiện tại</p>
                         <p className="mt-0.5 text-sm font-medium text-slate-900 [overflow-wrap:anywhere]">{fileNameFromUrl(cvUrl)}</p>
                         <a href={cvUrl} target="_blank" rel="noreferrer" className="mt-1 inline-block text-sm text-[#155DFC] underline-offset-2 hover:underline">
-                            View file
+                            Xem tệp
                         </a>
                     </>
                 ) : (
-                    <p className="text-sm text-slate-600">You haven't chosen a CV yet.</p>
+                    <p className="text-sm text-slate-600">Bạn chưa chọn CV nào.</p>
                 )}
             </div>
 
-            <p className="mt-4 text-xs font-medium uppercase tracking-wider text-slate-500">Upload a CV</p>
+            <p className="mt-4 text-xs font-medium uppercase tracking-wider text-slate-500">Tải lên CV</p>
 
             <div className="mt-2 flex flex-col gap-2">
                 <input ref={inputRef} type="file" accept=".pdf,.docx" onChange={handlePick} className="hidden" />
                 <button type="button" onClick={() => inputRef.current?.click()} disabled={busy} className={outlineBtn}>
-                    {busy ? "Uploading…" : "Upload your own CV"}
+                    {busy ? "Đang tải lên…" : "Tải lên CV của bạn"}
                 </button>
-                <p className="text-xs text-slate-500">PDF or DOCX · max 5MB</p>
+                <p className="text-xs text-slate-500">PDF hoặc DOCX · tối đa 5MB</p>
             </div>
 
-            <p className="mt-4 text-xs text-slate-500">Choosing a new CV replaces your current one.</p>
+            <p className="mt-4 text-xs text-slate-500">Chọn CV mới sẽ thay thế CV hiện tại.</p>
 
             <ConfirmDialog
                 open={!!pendingFile}
-                title="Replace your current CV?"
-                message="Do you want to replace your current CV with this file?"
+                title="Thay thế CV hiện tại?"
+                message="Bạn có muốn thay CV hiện tại bằng tệp này không?"
                 onYes={() => uploadOwn(pendingFile)}
                 onNo={() => setPendingFile(null)}
             />

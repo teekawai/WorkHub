@@ -8,14 +8,14 @@ const validateFinderProfile = (draft) => {
     const errors = {}
 
     if (!draft.fullname.trim()) {
-        errors.fullname = "Full name is required."
+        errors.fullname = "Vui lòng nhập họ và tên."
     }
 
     const phone = draft.phone.trim()
     if (!phone) {
-        errors.phone = "Phone number is required."
+        errors.phone = "Vui lòng nhập số điện thoại."
     } else if (!PHONE_REGEX.test(phone)) {
-        errors.phone = "Phone number must be exactly 10 digits (numbers only)."
+        errors.phone = "Số điện thoại phải gồm đúng 10 chữ số (chỉ nhập số)."
     }
 
     return errors

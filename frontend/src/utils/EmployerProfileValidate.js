@@ -11,50 +11,50 @@ const validateEmployerProfile = (draft) => {
     const errors = {}
 
     if (!draft.companyName?.trim()) {
-        errors.companyName = "Company name is required."
+        errors.companyName = "Vui lòng nhập tên công ty."
     } else if (draft.companyName.trim().length > 100) {
-        errors.companyName = "Company name must not exceed 100 characters."
+        errors.companyName = "Tên công ty không được dài quá 100 ký tự."
     }
 
     if (!draft.address?.trim()) {
-        errors.address = "Address is required."
+        errors.address = "Vui lòng nhập địa chỉ."
     } else if (draft.address.trim().length > 255) {
-        errors.address = "Address must not exceed 255 characters."
+        errors.address = "Địa chỉ không được dài quá 255 ký tự."
     }
 
     if (!draft.field?.trim()) {
-        errors.field = "Field is required."
+        errors.field = "Vui lòng nhập lĩnh vực hoạt động."
     } else if (draft.field.trim().length > 50) {
-        errors.field = "Field must not exceed 50 characters."
+        errors.field = "Lĩnh vực hoạt động không được dài quá 50 ký tự."
     }
 
     const phone = draft.phone?.trim() || ""
     if (!phone) {
-        errors.phone = "Phone number is required."
+        errors.phone = "Vui lòng nhập số điện thoại."
     } else if (!PHONE_REGEX.test(phone)) {
-        errors.phone = "Phone number must be 10-11 digits and start with 0."
+        errors.phone = "Số điện thoại phải gồm 10-11 chữ số và bắt đầu bằng số 0."
     }
 
     const tax = draft.taxCode?.trim() || ""
     if (!tax) {
-        errors.taxCode = "Tax code is required."
+        errors.taxCode = "Vui lòng nhập mã số thuế."
     } else if (!TAX_REGEX.test(tax)) {
-        errors.taxCode = "Tax code must be 10 or 13 digits (format 10 or 10-3)."
+        errors.taxCode = "Mã số thuế phải gồm 10 hoặc 13 chữ số (định dạng 10 hoặc 10-3)."
     }
 
     const yearRaw = draft.foundedYear?.trim() || ""
     if (!yearRaw) {
-        errors.foundedYear = "Founded year is required."
+        errors.foundedYear = "Vui lòng nhập năm thành lập."
     } else {
         const yearNum = Number(yearRaw)
         if (!/^\d{4}$/.test(yearRaw) || yearNum < 1800 || yearNum > CURRENT_YEAR) {
-            errors.foundedYear = `Founded year must be between 1800 and ${CURRENT_YEAR}.`
+            errors.foundedYear = `Năm thành lập phải nằm trong khoảng 1800 đến ${CURRENT_YEAR}.`
         }
     }
 
     const website = draft.website?.trim() || ""
     if (website && !URL_REGEX.test(website)) {
-        errors.website = "Website must be a valid URL starting with http:// or https://."
+        errors.website = "Website phải là đường dẫn hợp lệ, bắt đầu bằng http:// hoặc https://."
     }
 
     return errors

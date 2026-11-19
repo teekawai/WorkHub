@@ -5,7 +5,7 @@ import { ROUTE_PATH } from "../../routes/route"
 //trên màn nhỏ sidebar nằm phía trên, các link xếp ngang
 const links = [
     {
-        label: "Your Profile",
+        label: "Hồ sơ của bạn",
         to: ROUTE_PATH.FINDER.PROFILE,
         icon: (
             <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
@@ -15,7 +15,7 @@ const links = [
         ),
     },
     {
-        label: "Applied Jobs",
+        label: "Việc đã ứng tuyển",
         to: ROUTE_PATH.FINDER.APPLICATIONS,
         icon: (
             <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
@@ -36,8 +36,8 @@ function FinderLayout() {
                     <span className="px-0.5 text-[#155DFC]">Hub</span>
                 </Link>
 
-                <nav aria-label="Finder workspace" className="mt-4 flex flex-wrap gap-2 md:mt-8 md:flex-col md:flex-nowrap md:gap-1.5">
-                    <p className="hidden px-3 pb-1 text-xs font-medium uppercase tracking-wider text-slate-500 md:block">Finder workspace</p>
+                <nav aria-label="Không gian làm việc ứng viên" className="mt-4 flex flex-wrap gap-2 md:mt-8 md:flex-col md:flex-nowrap md:gap-1.5">
+                    <p className="hidden px-3 pb-1 text-xs font-medium uppercase tracking-wider text-slate-500 md:block">Không gian ứng viên</p>
                     {links.map((link) => (
                         <NavLink
                             key={link.to}

@@ -134,20 +134,20 @@ function CvPaper({ profile, edit, avatar, ref }) {
             <header className="flex min-h-36 items-center bg-blue-500 py-6 pr-8 pl-[200px]">
                 {editing ? (
                     <div className="w-full">
-                        <Field label="Full name *" error={errors.fullname} light>
-                            <input type="text" autoComplete="name" placeholder="Your full name" className={headerInputCls(errors.fullname)} {...bind("fullname")} />
+                        <Field label="Họ và tên *" error={errors.fullname} light>
+                            <input type="text" autoComplete="name" placeholder="Họ và tên của bạn" className={headerInputCls(errors.fullname)} {...bind("fullname")} />
                         </Field>
                     </div>
                 ) : (
                     <h2 className="min-w-0 text-3xl font-semibold leading-tight text-white [overflow-wrap:anywhere]">
-                        {data.fullname || "Your name"}
+                        {data.fullname || "Họ và tên của bạn"}
                     </h2>
                 )}
             </header>
             <div className="absolute left-8 top-12 size-36">
                 <img
                     src={profile?.avatar || defaultAvatar}
-                    alt="Profile photo"
+                    alt="Ảnh đại diện"
                     className="size-full rounded-full bg-blue-100 object-cover ring-4 ring-white"
                 />
                 {editing && avatar && (
@@ -167,10 +167,10 @@ function CvPaper({ profile, edit, avatar, ref }) {
                             type="button"
                             onClick={() => avatarInput.current?.click()}
                             disabled={avatar.busy}
-                            aria-label="Change profile photo"
+                            aria-label="Đổi ảnh đại diện"
                             className="absolute inset-0 flex items-center justify-center rounded-full bg-slate-900/50 px-4 text-center text-xs font-medium text-white opacity-0 transition-opacity hover:opacity-100 focus-visible:opacity-100 disabled:cursor-not-allowed disabled:opacity-100"
                         >
-                            {avatar.busy ? "Uploading…" : "Change photo"}
+                            {avatar.busy ? "Đang tải lên…" : "Đổi ảnh"}
                         </button>
                     </>
                 )}
@@ -186,35 +186,35 @@ function CvPaper({ profile, edit, avatar, ref }) {
                     )}
                     {editing ? (
                         <>
-                            <Section title="Personal information">
+                            <Section title="Thông tin cá nhân">
                                 <div className="flex flex-col gap-3">
-                                    <Field label="Phone *" error={errors.phone}>
-                                        <input type="tel" autoComplete="tel" placeholder="Phone number" className={inputCls(errors.phone)} {...bind("phone")} />
+                                    <Field label="Số điện thoại *" error={errors.phone}>
+                                        <input type="tel" autoComplete="tel" placeholder="Số điện thoại" className={inputCls(errors.phone)} {...bind("phone")} />
                                     </Field>
                                     <div>
                                         <span className="mb-1 block text-xs font-medium text-slate-600">Email</span>
-                                        <p className="text-sm text-slate-700 [overflow-wrap:anywhere]">{profile?.email || "Taken from your account"}</p>
-                                        <p className="mt-1 text-xs text-slate-500">Email comes from your account and can't be changed here.</p>
+                                        <p className="text-sm text-slate-700 [overflow-wrap:anywhere]">{profile?.email || "Lấy từ tài khoản của bạn"}</p>
+                                        <p className="mt-1 text-xs text-slate-500">Email lấy từ tài khoản của bạn và không thể thay đổi tại đây.</p>
                                     </div>
-                                    <Field label="Birthday">
+                                    <Field label="Ngày sinh">
                                         <input type="date" max={todayValue()} className={inputCls()} {...bind("dateOfBirth")} />
                                     </Field>
-                                    <Field label="Address">
-                                        <input type="text" autoComplete="street-address" placeholder="City, country" className={inputCls()} {...bind("address")} />
+                                    <Field label="Địa chỉ">
+                                        <input type="text" autoComplete="street-address" placeholder="Tỉnh/thành phố, quốc gia" className={inputCls()} {...bind("address")} />
                                     </Field>
                                     <Field label="LinkedIn">
-                                        <input type="text" placeholder="linkedin.com/in/your-name" className={inputCls()} {...bind("linkedIn")} />
+                                        <input type="text" placeholder="linkedin.com/in/ten-cua-ban" className={inputCls()} {...bind("linkedIn")} />
                                     </Field>
                                 </div>
                             </Section>
 
-                            <Section title="Education">
+                            <Section title="Học vấn">
                                 <div className="flex flex-col gap-3">
-                                    <Field label="School / university">
-                                        <input type="text" placeholder="Name of your school" className={inputCls()} {...bind("educationLevel")} />
+                                    <Field label="Trường học / đại học">
+                                        <input type="text" placeholder="Tên trường của bạn" className={inputCls()} {...bind("educationLevel")} />
                                     </Field>
-                                    <Field label="Major">
-                                        <input type="text" placeholder="Your major" className={inputCls()} {...bind("major")} />
+                                    <Field label="Chuyên ngành">
+                                        <input type="text" placeholder="Chuyên ngành của bạn" className={inputCls()} {...bind("major")} />
                                     </Field>
                                 </div>
                             </Section>
@@ -222,7 +222,7 @@ function CvPaper({ profile, edit, avatar, ref }) {
                     ) : (
                         <>
                             {hasContact && (
-                                <Section title="Personal information">
+                                <Section title="Thông tin cá nhân">
                                     <ul className="flex flex-col gap-3 text-sm text-slate-700">
                                         {data.phone && <ContactRow icon="phone">{data.phone}</ContactRow>}
                                         {profile?.email && <ContactRow icon="mail">{profile.email}</ContactRow>}
@@ -240,7 +240,7 @@ function CvPaper({ profile, edit, avatar, ref }) {
                             )}
 
                             {hasEducation && (
-                                <Section title="Education">
+                                <Section title="Học vấn">
                                     {data.educationLevel && <p className="text-sm font-medium text-slate-900 [overflow-wrap:anywhere]">{data.educationLevel}</p>}
                                     {data.major && <p className="text-sm text-slate-600 [overflow-wrap:anywhere]">{data.major}</p>}
                                 </Section>
@@ -253,38 +253,38 @@ function CvPaper({ profile, edit, avatar, ref }) {
                 <div className="flex min-w-0 flex-[999_1_400px] flex-col gap-8 px-10 py-8">
                     {editing ? (
                         <>
-                            <Section title="Career objective">
-                                <Field label="Career objective" hint="A short summary of what you're looking for.">
-                                    <textarea rows={5} placeholder="Tell employers who you are and what you want to do" className={inputCls()} {...bind("description")} />
+                            <Section title="Mục tiêu nghề nghiệp">
+                                <Field label="Mục tiêu nghề nghiệp" hint="Tóm tắt ngắn gọn về điều bạn đang tìm kiếm.">
+                                    <textarea rows={5} placeholder="Giới thiệu bản thân và định hướng công việc của bạn" className={inputCls()} {...bind("description")} />
                                 </Field>
                             </Section>
-                            <Section title="Skills">
-                                <Field label="Your skills" hint="Type them in any format you like.">
-                                    <textarea rows={4} placeholder="e.g. React, ASP.NET, teamwork" className={inputCls()} {...bind("skill")} />
+                            <Section title="Kỹ năng">
+                                <Field label="Kỹ năng của bạn" hint="Bạn có thể nhập theo bất kỳ định dạng nào.">
+                                    <textarea rows={4} placeholder="Ví dụ: React, ASP.NET, làm việc nhóm" className={inputCls()} {...bind("skill")} />
                                 </Field>
                             </Section>
-                            <Section title="Experience & projects">
-                                <Field label="Experience & projects" hint={'Start a line with "- " to make it a bullet point.'}>
-                                    <textarea rows={10} placeholder={"Frontend intern, ABC Company (2025)\n- Built the job search page with React"} className={inputCls()} {...bind("experience")} />
+                            <Section title="Kinh nghiệm & dự án">
+                                <Field label="Kinh nghiệm & dự án" hint={'Bắt đầu dòng bằng "- " để tạo gạch đầu dòng.'}>
+                                    <textarea rows={10} placeholder={"Thực tập sinh Frontend, Công ty ABC (2025)\n- Xây dựng trang tìm kiếm việc làm bằng React"} className={inputCls()} {...bind("experience")} />
                                 </Field>
                             </Section>
                         </>
                     ) : (
                         <>
                             {data.description && (
-                                <Section title="Career objective">
+                                <Section title="Mục tiêu nghề nghiệp">
                                     <p className="whitespace-pre-line text-sm leading-6 text-slate-700 [overflow-wrap:anywhere]">{data.description}</p>
                                 </Section>
                             )}
 
                             {data.skill && (
-                                <Section title="Skills">
+                                <Section title="Kỹ năng">
                                     <p className="whitespace-pre-line text-sm leading-6 text-slate-700 [overflow-wrap:anywhere]">{data.skill}</p>
                                 </Section>
                             )}
 
                             {blocks.length > 0 && (
-                                <Section title="Experience & projects">
+                                <Section title="Kinh nghiệm & dự án">
                                     <div className="flex flex-col gap-3 text-sm leading-6 text-slate-700">
                                         {blocks.map((block, i) =>
                                             block.type === "list" ? (
@@ -302,7 +302,7 @@ function CvPaper({ profile, edit, avatar, ref }) {
                             )}
 
                             {!hasMainContent && (
-                                <p className="text-sm text-slate-400">Add a career objective and your experience to complete your CV.</p>
+                                <p className="text-sm text-slate-400">Thêm mục tiêu nghề nghiệp và kinh nghiệm để hoàn thiện CV của bạn.</p>
                             )}
                         </>
                     )}
