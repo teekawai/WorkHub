@@ -5,7 +5,8 @@ import { loginUser } from "../../api/auth";
 import validateLogin from "../../utils/LoginValidate";
 import auth_banner1 from "../../assets/auth_banner1.png"
 import { ROUTE_PATH } from "../../routes/route"
-import { useAuth } from "../../context/AuthContext"
+import homeOf from "../../utils/homeOf"
+import { useAuth } from "../../context/useAuth"
 import GoogleRoleModal from "../../components/shared/GoogleRoleModal"
 
 function Login() {
@@ -22,7 +23,7 @@ function Login() {
     //dùng chung cho cả login thường và login Google: lưu user + điều hướng theo role
     const handleAuthSuccess = (currentUser) => {
         login(currentUser)
-        navigate(currentUser.role === "finder" ? ROUTE_PATH.FINDER.HOME : ROUTE_PATH.EMPLOYER.HOME)
+        navigate(homeOf(currentUser.role))
     }
 
     const handleLogin = async (e) => {

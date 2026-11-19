@@ -1,5 +1,10 @@
 import { useState, useEffect } from 'react'
+import { useNavigate } from 'react-router-dom'
 import { QUICK_TAGS } from '../../constants/homeData'
+import useJobOptions from '../../hooks/useJobOptions'
+import { buildSearchUrl } from '../../utils/jobSearch'
+import OptionsRetry from './OptionsRetry'
+import { findBackCategory } from '../../utils/homeJobs'
 import heroImg from '../../assets/finder_hero.png'
 
 // ─── Inline SVG icons ─────────────────────────────────────────────────────────
@@ -37,6 +42,18 @@ function HeroSection() {
   const [keyword, setKeyword]   = useState('')
   const [location, setLocation] = useState('')
   const [visible, setVisible]   = useState(false)
+  const navigate = useNavigate()
+  const { options, loading: optionsLoading, errorMsg: optionsError, reload } = useJobOptions()
+  // Tỉnh lấy từ BE; lỗi tải thì chỉ còn "Tất cả địa điểm". Chưa có danh sách ngành thì khóa chip
+  const tagsLocked = optionsLoading || !!optionsError
+
+  const handleSearch = e => {
+    e.preventDefault()
+    navigate(buildSearchUrl({ keyword, location }))
+  }
+
+  // Chip = lọc ngành; không map được thì chỉ mở trang Tìm việc (không dùng keyword thay thế)
+  const handleTag = tag => navigate(buildSearchUrl({ category: findBackCategory(tag, options) ?? '' }))
 
   // Trigger enter animation — delay nhỏ hơn một chút so với NavBar
   useEffect(() => {
@@ -81,7 +98,8 @@ function HeroSection() {
         </p>
 
         {/* ── Search bar ── */}
-        <div
+        <form
+          onSubmit={handleSearch}
           style={fadeUpStyle(visible, 320)}
           className="bg-white rounded-2xl p-2 flex flex-col md:flex-row items-stretch gap-2 shadow-2xl shadow-blue-950/40 max-w-2xl mx-auto mb-8"
         >
@@ -91,6 +109,7 @@ function HeroSection() {
             <input
               value={keyword}
               onChange={e => setKeyword(e.target.value)}
+              maxLength={255}
               placeholder="Vị trí, kỹ năng, công ty..."
               className="flex-1 text-sm text-gray-700 placeholder-gray-400 outline-none bg-transparent"
             />
@@ -100,22 +119,25 @@ function HeroSection() {
           <div className="hidden md:block w-px bg-gray-150 my-1.5 self-stretch" />
 
           {/* Location */}
-          <label className="flex items-center gap-2.5 md:w-44 px-4 py-2.5 rounded-xl hover:bg-gray-50 transition-colors duration-200 cursor-text">
+          <label className="flex items-center gap-2.5 md:w-48 px-4 py-2.5 rounded-xl hover:bg-gray-50 transition-colors duration-200 cursor-pointer">
             <span className="text-gray-400"><LocationIcon /></span>
-            <input
+            <select
               value={location}
               onChange={e => setLocation(e.target.value)}
-              placeholder="Địa điểm"
-              className="w-full text-sm text-gray-700 placeholder-gray-400 outline-none bg-transparent"
-            />
+              aria-label="Địa điểm"
+              className="w-full min-w-0 text-sm text-gray-700 outline-none bg-transparent cursor-pointer"
+            >
+              <option value="">Tất cả địa điểm</option>
+              {(options?.locations ?? []).map(name => <option key={name} value={name}>{name}</option>)}
+            </select>
           </label>
 
           {/* CTA button */}
-          <button className="group flex items-center justify-center gap-2 bg-blue-600 hover:bg-blue-700 active:scale-[0.97] text-white font-semibold text-sm px-6 py-3 rounded-xl shrink-0 transition-all duration-300 ease-[cubic-bezier(0.32,0.72,0,1)]">
+          <button type="submit" className="group flex items-center justify-center gap-2 bg-blue-600 hover:bg-blue-700 active:scale-[0.97] text-white font-semibold text-sm px-6 py-3 rounded-xl shrink-0 transition-all duration-300 ease-[cubic-bezier(0.32,0.72,0,1)]">
             Tìm kiếm
             <ArrowIcon />
           </button>
-        </div>
+        </form>
 
         {/* Quick tags */}
         <div style={fadeUpStyle(visible, 420)} className="flex flex-wrap items-center justify-center gap-2">
@@ -123,12 +145,17 @@ function HeroSection() {
           {QUICK_TAGS.map(tag => (
             <button
               key={tag}
-              className="text-xs text-white/75 hover:text-white bg-white/10 hover:bg-white/20 border border-white/20 hover:border-white/40 px-3 py-1 rounded-full transition-all duration-250 ease-[cubic-bezier(0.32,0.72,0,1)]"
+              type="button"
+              disabled={tagsLocked}
+              aria-disabled={tagsLocked}
+              onClick={() => handleTag(tag)}
+              className="text-xs text-white/75 hover:text-white bg-white/10 hover:bg-white/20 border border-white/20 hover:border-white/40 disabled:opacity-50 disabled:cursor-not-allowed px-3 py-1 rounded-full transition-all duration-250 ease-[cubic-bezier(0.32,0.72,0,1)]"
             >
               {tag}
             </button>
           ))}
         </div>
+        {optionsError && <div className="mt-3"><OptionsRetry onRetry={reload} className="text-white/70" /></div>}
 
       </div>
     </section>

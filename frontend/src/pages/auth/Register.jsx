@@ -4,7 +4,8 @@ import { getRegisterUser } from "../../api/auth";
 import validate from "../../utils/RegisterValidate";
 import auth_banner1 from "../../assets/auth_banner1.png"
 import { ROUTE_PATH } from "../../routes/route"
-import { useAuth } from "../../context/AuthContext"
+import homeOf from "../../utils/homeOf"
+import { useAuth } from "../../context/useAuth"
 import GoogleRoleModal from "../../components/shared/GoogleRoleModal"
 
 function Register() {
@@ -27,7 +28,7 @@ function Register() {
     const handleGoogleSuccess = (currentUser) => {
         setShowGoogleModal(false)
         login(currentUser)
-        navigate(currentUser.role === "finder" ? ROUTE_PATH.FINDER.HOME : ROUTE_PATH.EMPLOYER.HOME)
+        navigate(homeOf(currentUser.role))
     }
 
     const handleRegister = async (e) => {
@@ -49,7 +50,7 @@ function Register() {
             await getRegisterUser({ username, password, email, role })
             navigate(ROUTE_PATH.AUTH.LOGIN)
         } catch (e) {
-            setError("Đăng kí thất bại: " + e.response?.data?.message)
+            setError("Đăng ký thất bại: " + e.response?.data?.message)
         } finally {
             setLoading(false)
         }

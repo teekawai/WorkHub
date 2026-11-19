@@ -1,4 +1,5 @@
 import { useState } from "react"
+import VerifyStatusBanner from "../job/VerifyStatusBanner"
 
 //Widget trạng thái xác minh công ty (Bước 4 PLAN_FE_EmployerProfile.md). Không gọi API, chỉ đọc profile.isVerified
 //(BE trả sẵn trong GET /employer/me).
@@ -20,12 +21,36 @@ function VerifyCompanyWidget({ profile }) {
                     <path d="M22 4 12 14.01l-3-3" />
                 </svg>
                 <div className="min-w-0 flex-1">
-                    <p className="text-sm font-medium text-emerald-900">Your company is verified</p>
+                    <p className="text-sm font-medium text-emerald-900">Công ty của bạn đã được xác minh</p>
                     <p className="mt-0.5 text-sm text-emerald-700">
-                        A verified badge is shown on your job posts.
+                        Huy hiệu đã xác minh sẽ hiển thị trên các tin tuyển dụng của bạn.
                     </p>
                 </div>
             </section>
+        )
+    }
+
+    //bị thu hồi (có lý do): banner đỏ thay khối vàng, vẫn giữ nút "Xác minh ngay" + câu liên hệ
+    if (profile?.unverifyReason) {
+        return (
+            <VerifyStatusBanner isVerified={false} unverifyReason={profile.unverifyReason} variant="profile">
+                {showContact && (
+                    <p role="status" className="mt-2 text-sm font-medium text-red-800 [overflow-wrap:anywhere]">
+                        Vui lòng liên hệ{" "}
+                        <a href={`mailto:${VERIFY_EMAIL}`} className="underline underline-offset-2">
+                            {VERIFY_EMAIL}
+                        </a>{" "}
+                        để được xác minh công ty.
+                    </p>
+                )}
+                <button
+                    type="button"
+                    onClick={() => setShowContact(true)}
+                    className="mt-3 rounded-lg border border-red-300 bg-white px-3 py-1.5 text-xs font-medium text-red-700 transition-colors hover:bg-red-100"
+                >
+                    Xác minh ngay
+                </button>
+            </VerifyStatusBanner>
         )
     }
 
@@ -37,17 +62,17 @@ function VerifyCompanyWidget({ profile }) {
                 <path d="M10.29 3.86 1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z" />
             </svg>
             <div className="min-w-0 flex-1">
-                <p className="text-sm font-medium text-amber-900">Your company isn't verified yet</p>
+                <p className="text-sm font-medium text-amber-900">Công ty của bạn chưa được xác minh</p>
                 <p className="mt-0.5 text-sm text-amber-700">
-                    Verified companies get a badge on their job posts and build more trust with candidates.
+                    Công ty đã xác minh có huy hiệu trên tin tuyển dụng và tạo thêm niềm tin với ứng viên.
                 </p>
                 {showContact && (
                     <p role="status" className="mt-2 text-sm font-medium text-amber-900 [overflow-wrap:anywhere]">
-                        Please contact{" "}
+                        Vui lòng liên hệ{" "}
                         <a href={`mailto:${VERIFY_EMAIL}`} className="underline underline-offset-2">
                             {VERIFY_EMAIL}
                         </a>{" "}
-                        to get your company verified.
+                        để được xác minh công ty.
                     </p>
                 )}
             </div>
@@ -56,7 +81,7 @@ function VerifyCompanyWidget({ profile }) {
                 onClick={() => setShowContact(true)}
                 className="shrink-0 rounded-lg border border-amber-300 bg-white px-3 py-1.5 text-xs font-medium text-amber-700 transition-colors hover:bg-amber-100"
             >
-                Verify now
+                Xác minh ngay
             </button>
         </section>
     )

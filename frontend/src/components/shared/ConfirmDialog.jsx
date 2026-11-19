@@ -1,7 +1,8 @@
 import { useEffect } from "react"
 
 //Hộp thoại Yes / No. Hiện khi `open` = true. Bấm nền tối hoặc phím Esc = chọn No.
-function ConfirmDialog({ open, title, message, onYes, onNo }) {
+//Prop tùy chọn: yesLabel / noLabel đổi chữ nút, danger = nút Yes màu đỏ (hành động xóa).
+function ConfirmDialog({ open, title, message, onYes, onNo, yesLabel = "Đồng ý", noLabel = "Không", danger = false }) {
     useEffect(() => {
         if (!open) return
         const onKey = (e) => {
@@ -31,14 +32,14 @@ function ConfirmDialog({ open, title, message, onYes, onNo }) {
                         onClick={onNo}
                         className="rounded-lg border border-slate-300 bg-white px-4 py-2 text-sm font-medium text-slate-700 transition-colors hover:bg-slate-50"
                     >
-                        No
+                        {noLabel}
                     </button>
                     <button
                         type="button"
                         onClick={onYes}
-                        className="rounded-lg bg-[#155DFC] px-4 py-2 text-sm font-medium text-white transition-colors hover:bg-[#0F4FE0]"
+                        className={`rounded-lg px-4 py-2 text-sm font-medium text-white transition-colors ${danger ? "bg-red-600 hover:bg-red-700" : "bg-[#155DFC] hover:bg-[#0F4FE0]"}`}
                     >
-                        Yes
+                        {yesLabel}
                     </button>
                 </div>
             </div>

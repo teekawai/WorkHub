@@ -1,4 +1,9 @@
+import { useNavigate } from 'react-router-dom'
 import { CATEGORIES } from '../../constants/homeData'
+import useJobOptions from '../../hooks/useJobOptions'
+import OptionsRetry from './OptionsRetry'
+import { buildSearchUrl } from '../../utils/jobSearch'
+import { findBackCategory } from '../../utils/homeJobs'
 import { useInView } from '../../hooks/useInView'
 
 // ─── Category SVG icons ───────────────────────────────────────────────────────
@@ -53,6 +58,9 @@ const CategoryIcon = ({ type }) => {
 
 function CategoryGrid() {
   const [ref, inView] = useInView()
+  const navigate = useNavigate()
+  const { options, loading: optionsLoading, errorMsg: optionsError, reload } = useJobOptions()
+  const locked = optionsLoading || !!optionsError // chưa có danh sách ngành thì chưa lọc được
 
   return (
     <section className="bg-white py-20 px-5">
@@ -71,11 +79,17 @@ function CategoryGrid() {
           </p>
         </div>
 
+        {optionsError && <div className="-mt-6 mb-6 text-center"><OptionsRetry onRetry={reload} /></div>}
+
         {/* Grid */}
         <div ref={ref} className="grid grid-cols-2 sm:grid-cols-4 gap-4">
           {CATEGORIES.map((cat, i) => (
             <button
               key={cat.id}
+              type="button"
+              disabled={locked}
+              aria-disabled={locked}
+              onClick={() => navigate(buildSearchUrl({ category: findBackCategory(cat.shortLabel, options) ?? '' }))}
               style={{
                 opacity: inView ? 1 : 0,
                 transform: inView ? 'translateY(0)' : 'translateY(20px)',
@@ -85,10 +99,9 @@ function CategoryGrid() {
               className={`
                 group flex flex-col items-center gap-3 p-5 rounded-2xl
                 border-2 border-gray-100
-                ${cat.color} ${cat.hoverColor}
-                hover:border-current hover:scale-[1.04] hover:shadow-lg
+                ${cat.color} ${locked ? '' : `${cat.hoverColor} hover:border-current hover:scale-[1.04] hover:shadow-lg`}
                 transition-all duration-300 ease-[cubic-bezier(0.32,0.72,0,1)]
-                cursor-pointer text-left
+                cursor-pointer disabled:cursor-not-allowed disabled:opacity-60 text-left
               `}
             >
               {/* Icon wrapper */}
@@ -98,9 +111,7 @@ function CategoryGrid() {
 
               <div className="w-full">
                 <p className="font-semibold text-sm leading-snug">{cat.shortLabel}</p>
-                <p className="text-xs mt-0.5 opacity-70">
-                  {cat.count !== null ? `${cat.count} việc làm` : '— việc làm'}
-                </p>
+                <p className="text-xs mt-0.5 opacity-70">Đang cập nhật</p>
               </div>
             </button>
           ))}
