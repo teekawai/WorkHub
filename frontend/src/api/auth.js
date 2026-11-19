@@ -22,7 +22,7 @@ export const googleAuth = (async (data)=>{
     return res.data
 })
 
-export const refreshToken =(async (data)=>{
+export const refreshToken =(async ()=>{
     const res = await publicClient.post("/auth/refresh")
     return res.data
 })
