@@ -4,6 +4,7 @@ using backend.DTO;
 using backend.Models;
 using backend.Repositories;
 using backend.Common;
+using backend.Services.admin;
 
 namespace backend.Services.auth;
 
@@ -25,6 +26,11 @@ public class LoginService : ILoginService
         var user = await _repo.GetUserByEmail(dto.Email);
 
         if (user == null)
+        {
+            return ServiceResult<User>.Fail(ErrorCode.Unauthorized, "Sai tài khoản hoặc mật khẩu");
+        }
+        // admin chỉ đăng nhập qua /api/admin/login; cùng lỗi để không lộ email nào là admin
+        if (user.Role == AdminSeeder.Role)
         {
             return ServiceResult<User>.Fail(ErrorCode.Unauthorized, "Sai tài khoản hoặc mật khẩu");
         }

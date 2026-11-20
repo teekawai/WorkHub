@@ -1,4 +1,5 @@
 using System.Security.Claims;
+using backend.Common;
 using backend.Models;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.EntityFrameworkCore;
@@ -23,7 +24,8 @@ namespace backend.Authorization
             VerifiedEmployerRequirement requirement)
         {
             var userId = context.User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
-            if (string.IsNullOrEmpty(userId))
+            // không phải employer thì bỏ qua (để RequireRole quyết định -> FORBIDDEN_ROLE), không gắn reason
+            if (string.IsNullOrEmpty(userId) || !context.User.IsInRole("employer"))
             {
                 return;
             }
@@ -34,7 +36,15 @@ namespace backend.Authorization
                 .Select(e => (bool?)e.IsVerified)
                 .FirstOrDefaultAsync();
 
-            if (isVerified == true)
+            if (isVerified == null)
+            {
+                context.Fail(new AuthorizationFailureReason(this, ApiErrorCodes.EmployerProfileNotFound));
+            }
+            else if (isVerified == false)
+            {
+                context.Fail(new AuthorizationFailureReason(this, ApiErrorCodes.EmployerNotVerified));
+            }
+            else
             {
                 context.Succeed(requirement);
             }

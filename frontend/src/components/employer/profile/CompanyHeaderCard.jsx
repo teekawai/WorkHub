@@ -35,12 +35,12 @@ function CompanyHeaderCard({ profile, onEdit, isEditing }) {
                 <div className="flex min-w-0 flex-1 items-center gap-4 sm:gap-5">
                     <img
                         src={profile?.logo || defaultLogo}
-                        alt={`${profile?.companyName || "Company"} logo`}
+                        alt={`Logo ${profile?.companyName || "công ty"}`}
                         className="size-16 shrink-0 rounded-xl border-2 border-white/30 bg-white/10 object-cover sm:size-20"
                     />
                     <div className="min-w-0">
                         <h1 className="truncate text-2xl font-semibold tracking-tight sm:text-3xl">
-                            {profile?.companyName || "Your company"}
+                            {profile?.companyName || "Công ty của bạn"}
                         </h1>
                         {sub && <p className="mt-1 text-sm font-medium text-blue-100">{sub}</p>}
                         {tag && <p className="mt-2 max-w-xl text-sm text-blue-50/90 [overflow-wrap:anywhere]">{tag}</p>}
@@ -53,7 +53,7 @@ function CompanyHeaderCard({ profile, onEdit, isEditing }) {
                         onClick={onEdit}
                         className="shrink-0 rounded-lg bg-white/15 px-4 py-2 text-sm font-medium text-white backdrop-blur-sm transition-colors hover:bg-white/25"
                     >
-                        Edit profile
+                        Chỉnh sửa hồ sơ
                     </button>
                 )}
             </div>

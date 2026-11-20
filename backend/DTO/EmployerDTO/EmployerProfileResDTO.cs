@@ -26,5 +26,6 @@ namespace backend.DTO.EmployerDTO
         [Required(ErrorMessage = "Không bỏ trống")]
         public string Email { get; set; } = null!;
         public bool IsVerified {get; set;}
+        public string? UnverifyReason { get; set; }
     }
 }

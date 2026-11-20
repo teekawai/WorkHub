@@ -485,5 +485,13 @@ postman/
 PLAN.md
 PROJECT.md
 *.md
+# mọi file .md đều không đưa lên, trừ README
+!README.md
 
 
+
+# project unit test BE (chỉ dùng local)
+backend.Tests/
+
+# log runtime BE
+backend/logs/

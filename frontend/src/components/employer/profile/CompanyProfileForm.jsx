@@ -14,7 +14,7 @@ function CompanyProfileForm({ profile, draft, errors, onChange, logo }) {
     const logoInput = useRef(null)
     //đã verify thì BE khóa companyName + taxCode (định danh pháp lý đã xác minh) -> FE để readonly cho khớp
     const verified = !!profile?.isVerified
-    const lockedHint = verified ? "Verified — contact support to change this." : undefined
+    const lockedHint = verified ? "Đã xác minh — liên hệ hỗ trợ nếu cần thay đổi." : undefined
 
     return (
         <div className="flex flex-col gap-6">
@@ -23,7 +23,7 @@ function CompanyProfileForm({ profile, draft, errors, onChange, logo }) {
                 <div className="group relative size-20 shrink-0">
                     <img
                         src={profile?.logo || defaultLogo}
-                        alt="Company logo"
+                        alt="Logo công ty"
                         className="size-full rounded-xl border border-slate-200 bg-slate-50 object-cover"
                     />
                     <input
@@ -41,15 +41,15 @@ function CompanyProfileForm({ profile, draft, errors, onChange, logo }) {
                         type="button"
                         onClick={() => logoInput.current?.click()}
                         disabled={logo.busy}
-                        aria-label="Change company logo"
+                        aria-label="Đổi logo công ty"
                         className="absolute inset-0 flex items-center justify-center rounded-xl bg-slate-900/50 px-1 text-center text-[11px] font-medium leading-tight text-white opacity-0 transition-opacity group-hover:opacity-100 focus-visible:opacity-100 disabled:cursor-not-allowed disabled:opacity-100 disabled:bg-slate-900/0"
                     >
-                        {logo.busy ? "Uploading…" : "Change logo"}
+                        {logo.busy ? "Đang tải lên…" : "Đổi logo"}
                     </button>
                 </div>
                 <div className="min-w-0">
-                    <p className="text-sm font-medium text-slate-900">Company logo</p>
-                    <p className="mt-0.5 text-xs text-slate-500">JPG or PNG, up to 2MB.</p>
+                    <p className="text-sm font-medium text-slate-900">Logo công ty</p>
+                    <p className="mt-0.5 text-xs text-slate-500">JPG hoặc PNG, tối đa 2MB.</p>
                     {logo.error && (
                         <p role="alert" className="mt-1.5 text-xs font-medium text-red-600">
                             {logo.error}
@@ -59,55 +59,55 @@ function CompanyProfileForm({ profile, draft, errors, onChange, logo }) {
             </div>
 
             <FormField
-                label="Company name *"
+                label="Tên công ty *"
                 name="companyName"
                 value={draft.companyName}
                 onChange={onChange}
                 error={errors.companyName}
                 readOnly={verified}
                 hint={lockedHint}
-                placeholder="Your company's name"
+                placeholder="Tên công ty của bạn"
             />
 
             <div className="grid gap-5 sm:grid-cols-2">
                 <FormField
-                    label="Address *"
+                    label="Địa chỉ *"
                     name="address"
                     value={draft.address}
                     onChange={onChange}
                     error={errors.address}
-                    placeholder="City, country"
+                    placeholder="Tỉnh/thành phố, quốc gia"
                 />
                 <FormField
-                    label="Phone *"
+                    label="Số điện thoại *"
                     name="phone"
                     value={draft.phone}
                     onChange={onChange}
                     error={errors.phone}
                     type="tel"
-                    placeholder="Phone number"
+                    placeholder="Số điện thoại"
                 />
             </div>
 
             <div className="grid gap-5 sm:grid-cols-2">
                 <FormField
-                    label="Founded year *"
+                    label="Năm thành lập *"
                     name="foundedYear"
                     value={draft.foundedYear}
                     onChange={onChange}
                     error={errors.foundedYear}
                     type="number"
-                    placeholder="e.g. 2018"
+                    placeholder="Ví dụ: 2018"
                 />
                 <FormField
-                    label="Tax code *"
+                    label="Mã số thuế *"
                     name="taxCode"
                     value={draft.taxCode}
                     onChange={onChange}
                     error={errors.taxCode}
                     readOnly={verified}
                     hint={lockedHint}
-                    placeholder="Business tax code"
+                    placeholder="Mã số thuế doanh nghiệp"
                 />
             </div>
 
@@ -117,37 +117,37 @@ function CompanyProfileForm({ profile, draft, errors, onChange, logo }) {
                 value={draft.website}
                 onChange={onChange}
                 error={errors.website}
-                placeholder="yourcompany.com"
+                placeholder="congtycuaban.com"
             />
 
             <div>
                 <label className="text-sm font-medium text-slate-700">Email</label>
-                <p className="mt-1 text-sm text-slate-500 [overflow-wrap:anywhere]">{profile?.email || "Taken from your account"}</p>
-                <p className="mt-1 text-xs text-slate-400">Email comes from your account and can't be changed here.</p>
+                <p className="mt-1 text-sm text-slate-500 [overflow-wrap:anywhere]">{profile?.email || "Lấy từ tài khoản của bạn"}</p>
+                <p className="mt-1 text-xs text-slate-400">Email lấy từ tài khoản của bạn và không thể thay đổi tại đây.</p>
             </div>
 
             <FormField
-                label="Field *"
+                label="Lĩnh vực hoạt động *"
                 name="field"
                 value={draft.field}
                 onChange={onChange}
                 error={errors.field}
                 type="textarea"
                 rows={2}
-                hint="Separate multiple fields with commas, e.g. Technology, Software Development."
-                placeholder="Technology, Software Development"
+                hint="Nhiều lĩnh vực thì cách nhau bằng dấu phẩy, ví dụ: Công nghệ, Phát triển phần mềm."
+                placeholder="Công nghệ, Phát triển phần mềm"
             />
 
             <FormField
-                label="Description"
+                label="Mô tả"
                 name="description"
                 value={draft.description}
                 onChange={onChange}
                 error={errors.description}
                 type="textarea"
                 rows={5}
-                hint="The first sentence is shown as your company's tagline."
-                placeholder="Tell candidates what your company does."
+                hint="Câu đầu tiên sẽ hiển thị làm khẩu hiệu của công ty."
+                placeholder="Giới thiệu để ứng viên hiểu công ty bạn hoạt động trong lĩnh vực gì."
             />
         </div>
     )

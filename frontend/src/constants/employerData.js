@@ -47,7 +47,7 @@ export const EMPLOYER_FEATURES = [
     id: 4,
     icon: 'status',
     title: 'Quản lý trạng thái',
-    desc: 'Cập nhật trạng thái ứng tuyển (Pending → Reviewing → Accepted / Rejected) trực quan.',
+    desc: 'Cập nhật trạng thái ứng tuyển (Chờ xử lý → Đang xem xét → Chấp nhận / Từ chối) trực quan.',
   },
   {
     id: 5,

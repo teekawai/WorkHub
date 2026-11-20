@@ -1,4 +1,6 @@
 using backend.DTO;
+using backend.DTO.AdminDTO;
+using backend.Services.admin;
 using backend.Models;
 using backend.Repositories;
 using backend.Services.auth;
@@ -31,12 +33,13 @@ namespace backend.Controllers
         private readonly IGoogleAuthService _googleAuthService;
         private readonly IDatabase _redis;
         private readonly ILogger<AuthController> _logger;
+        private readonly IAdminAuthService _adminAuthService;
 
         public AuthController(WorkHubContext context, IConfiguration _configuration,
             IJwtTokenService _jwtTokenService, UserRepository _repo,
             ILoginService _loginService, INewRegisterService _registerService,
             ITokenValidate refTokenService, IGoogleAuthService googleAuthService, IConnectionMultiplexer _redis,
-            ILogger<AuthController> logger)
+            ILogger<AuthController> logger, IAdminAuthService adminAuthService)
         {
             this._workHubContext = context;
             this._configuration = _configuration;
@@ -48,6 +51,7 @@ namespace backend.Controllers
             this._googleAuthService = googleAuthService;
             this._redis = _redis.GetDatabase();
             this._logger = logger;
+            this._adminAuthService = adminAuthService;
         }
 
         [HttpPost("register")]
@@ -55,15 +59,7 @@ namespace backend.Controllers
         public async Task<IActionResult> Register(RegisterDTO dto)
         {
             var user = await _registerService.CreateUser(dto);
-
-            return user.Code switch
-            {
-                ErrorCode.Success => Ok(new { user.Data!.UserId, user.Data.Email, user.Data.Username, user.Data.Role }),
-                ErrorCode.NotFound => NotFound(new { message = user.Message }),
-                ErrorCode.Conflict => Conflict(new { message = user.Message }),
-                ErrorCode.BadRequest => BadRequest(new { message = user.Message }),
-                _ => StatusCode(500, new { message = "Lỗi không xác định" })
-            };
+            return user.ToActionResult(u => Ok(new { u.UserId, u.Email, u.Username, u.Role }));
         }
 
         //tạo cả access và refresh token nhưng lưu refresh token vào cookie và redis, còn trả lại accessToken thôi
@@ -96,15 +92,7 @@ namespace backend.Controllers
         public async Task<IActionResult> GoogleAuth([FromBody] GoogleLoginDTO dto)
         {
             var result = await _googleAuthService.AuthenticateAsync(dto);
-            if (!result.IsSuccess)
-            {
-                return result.Code switch
-                {
-                    ErrorCode.BadRequest => BadRequest(new { message = result.Message }),
-                    ErrorCode.Conflict => Conflict(new { message = result.Message }),
-                    _ => Unauthorized(new { message = result.Message })
-                };
-            }
+            if (!result.IsSuccess) return result.ToActionResult();
 
             var user = result.Data!;
             var accessToken = await CreateJwtToken(dto.rememberMe, user);
@@ -125,15 +113,7 @@ namespace backend.Controllers
             var result = await _loginService.LoginResult(dto);
 
             //check có dữ liệu user được trả về kh, kh thì lỗi, có thì tạo token qua hàm chung
-            if (!result.IsSuccess)
-            {
-                return result.Code switch
-                {
-                    ErrorCode.Unauthorized => Unauthorized(new { message = result.Message }),
-                    ErrorCode.ServiceUnavailable => StatusCode(503, new { message = result.Message }),
-                    _ => StatusCode(500, new { message = "Lỗi không xác định" })
-                };
-            }
+            if (!result.IsSuccess) return result.ToActionResult();
 
             var user = result.Data!;
             string accessToken;
@@ -145,11 +125,39 @@ namespace backend.Controllers
             catch (RedisException ex)   // RedisException bao luôn ConnectionException + Timeout
             {
                 _logger.LogError(ex, "Redis error during login");
-                return StatusCode(503, new { message = "The service is temporarily unavailable. Please try again later." });
+                return StatusCode(503, new ApiError(ApiErrorCodes.ServiceUnavailable, "Dịch vụ tạm thời không khả dụng, vui lòng thử lại sau"));
             }
 
             //return dữ liệu vào local cho phía fe
             return Ok(new { accessToken, user.Email, user.UserId, user.Role, Avatar = await GetAvatar(user) });
+        }
+
+        // Route đăng nhập cho admin
+        [HttpPost("/api/admin/login")]
+        public async Task<IActionResult> AdminLogin([FromBody] AdminLoginDTO dto)
+        {
+            var ip = HttpContext.Connection.RemoteIpAddress?.ToString() ?? "unknown";
+            try
+            {
+                var (result, retryAfter) = await _adminAuthService.LoginAsync(dto, ip);
+                if (!result.IsSuccess)
+                {
+                    if (retryAfter != null)
+                        Response.Headers.RetryAfter = ((int)Math.Ceiling(retryAfter.Value.TotalSeconds)).ToString();
+                    return result.ToActionResult();
+                }
+
+                var user = result.Data!;
+                // admin luôn phiên ngắn, bỏ qua RememberMe client gửi (không cấp cookie refresh 30 ngày cho admin)
+                var accessToken = await CreateJwtToken(false, user);
+                return Ok(new { accessToken, user.Email, user.UserId, user.Role });
+            }
+            // RedisTimeoutException kế thừa TimeoutException chứ không phải RedisException
+            catch (Exception ex) when (ex is RedisException or TimeoutException)
+            {
+                _logger.LogError(ex, "Redis error during admin login");
+                return StatusCode(503, new ApiError(ApiErrorCodes.ServiceUnavailable, "Dịch vụ tạm thời không khả dụng, vui lòng thử lại sau"));
+            }
         }
 
         [HttpPost("refresh")]
@@ -157,20 +165,14 @@ namespace backend.Controllers
         {
             var refreshToken = Request.Cookies["refreshToken"];
             var principle = await _refTokenService.ValidateToken(refreshToken);
-            if (!principle.IsSuccess)
-            {
-                if (principle.Code == ErrorCode.ServiceUnavailable)
-                {
-                    return StatusCode(503, new { message = principle.Message });
-                }
-                return Unauthorized(new { message = principle.Message });
-            }
+            if (!principle.IsSuccess) return principle.ToActionResult();
             // nếu đoạn principle ok thì cấp lại accesstoken mới cho người dùng
             var userId = principle.Data!.FindFirst(ClaimTypes.NameIdentifier)?.Value;
             var user = await _workHubContext.Users.AsNoTracking().FirstOrDefaultAsync(u => u.UserId == userId);
+            // user đã bị xoá -> phiên không còn hợp lệ, FE interceptor sẽ đưa về trang login
             if (user == null)
             {
-                return BadRequest(new { message = "Không có người dùng này!" });
+                return Unauthorized(new ApiError(ApiErrorCodes.Unauthenticated, "Không có người dùng này"));
             }
 
             var accessToken = _jwtTokenService.JwtToken(user, true, 15);
@@ -182,7 +184,7 @@ namespace backend.Controllers
         public async Task<IActionResult> Logout()
         {
             var userId = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
-            if (userId == null) return Unauthorized();
+            if (userId == null) return Unauthorized(new ApiError(ApiErrorCodes.Unauthenticated, "Bạn chưa đăng nhập hoặc phiên đăng nhập đã hết hạn"));
 
             try
             {
@@ -194,13 +196,13 @@ namespace backend.Controllers
                     Secure = true,
                     SameSite = SameSiteMode.Strict
                 });
-                return Ok(new { message = "Logged out successfully." });
+                return Ok(new { message = "Đăng xuất thành công" });
             }
             catch (RedisException ex)
             {
                 //ghi lỗi ở server, không trả chi tiết lỗi Redis về cho client
                 _logger.LogError(ex, "Redis error during logout");
-                return StatusCode(503, new { message = "The service is temporarily unavailable. Please try again later." });
+                return StatusCode(503, new ApiError(ApiErrorCodes.ServiceUnavailable, "Dịch vụ tạm thời không khả dụng, vui lòng thử lại sau"));
             }
 
 

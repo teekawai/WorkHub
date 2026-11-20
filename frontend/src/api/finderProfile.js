@@ -15,33 +15,33 @@ export const getFinderProfile = async () => {
 //helper status code of getProfile
 export const getProfileMsg = (err) => {
     if (!err.response) {
-        return "Cannot connect to the server. Please check your connection."
+        return "Không thể kết nối tới máy chủ. Vui lòng kiểm tra kết nối mạng."
     } else {
         var eStatus = err.response?.status
         switch (eStatus) {
             case 400: {
-                return "Some information is invalid. Please check and try again."
+                return "Một số thông tin không hợp lệ. Vui lòng kiểm tra và thử lại."
             }
             case 403: {
-                return "You don't have access to this page."
+                return "Bạn không có quyền truy cập trang này."
             }
             case 404: {
-                return "We couldn't find your profile."
+                return "Không tìm thấy hồ sơ của bạn."
             }
             case 409: {
-                return "This information is already in use."
+                return "Thông tin này đã được sử dụng."
             }
             case 413: {
-                return "The file is too large."
+                return "Tệp quá lớn."
             }
             case 429: {
-                return "Too many requests. Please wait a minute and try again."
+                return "Bạn thao tác quá nhanh. Vui lòng đợi một phút rồi thử lại."
             }
             case 500: {
-                return "Something went wrong on our side. Please try again later."
+                return "Hệ thống đang gặp sự cố. Vui lòng thử lại sau."
             }
             default: {
-                return "Something went wrong. Please try again."
+                return "Đã có lỗi xảy ra. Vui lòng thử lại."
             }
         }
 

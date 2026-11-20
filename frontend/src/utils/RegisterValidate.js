@@ -6,9 +6,9 @@ const validate = ({ username, password, email, role, agreeTerms }) => {
     }
 
     if (!password) {
-        return "Password không được để trống!"
-    } else if (password.length < 6) {
-        return "Mật khẩu cần ít nhất 6 ký tự!"
+        return "Mật khẩu không được để trống!"
+    } else if (password.length < 8) {
+        return "Mật khẩu cần ít nhất 8 ký tự!"
     }
 
     if (!username) {
@@ -20,7 +20,7 @@ const validate = ({ username, password, email, role, agreeTerms }) => {
     if (!role) {
         return "Hãy chọn vai trò của bạn!"
     } else if (role != "finder" && role != "employer") {
-        return "Bạn cần chọn đúng role của mình!"
+        return "Vai trò bạn chọn không hợp lệ!"
     }
 
     if (!agreeTerms) {

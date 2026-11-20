@@ -1,6 +1,7 @@
 using backend.Common;
 using backend.DTO;
 using backend.Models;
+using backend.Services.admin;
 using Google.Apis.Auth;
 using Microsoft.EntityFrameworkCore;
 
@@ -72,6 +73,11 @@ namespace backend.Services.auth
                         return ServiceResult<User>.Fail(ErrorCode.Conflict, "Không thể xác thực Google lúc này, vui lòng thử lại.");
                     }
                 }
+            }
+            // admin không đăng nhập bằng Google; phải chặn TRƯỚC nhánh !EmailVerified bên dưới (nhánh đó xóa PasswordHash và đổi Role)
+            else if (user.Role == AdminSeeder.Role)
+            {
+                return ServiceResult<User>.Fail(ErrorCode.Unauthorized, "Tài khoản không thể đăng nhập bằng Google");
             }
             // tài khoản đăng ký bằng mật khẩu nhưng chưa ai chứng minh sở hữu email -> có thể là người khác đăng ký giữ chỗ email này.
             // Google đã xác minh người đang đăng nhập là chủ email -> vô hiệu mật khẩu cũ để kẻ giữ chỗ không vào được nữa.

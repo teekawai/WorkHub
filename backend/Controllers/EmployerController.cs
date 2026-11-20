@@ -1,4 +1,5 @@
-﻿using backend.DTO;
+﻿using backend.Common;
+using backend.DTO;
 using backend.DTO.EmployerDTO;
 using backend.DTO.FinderProfileDTO;
 using backend.Models;
@@ -7,6 +8,7 @@ using backend.Services.files;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
+using MySqlConnector;
 using System.Security.Claims;
 
 namespace backend.Controllers
@@ -32,7 +34,7 @@ namespace backend.Controllers
             var profile = await _context.Employerprofiles.AsNoTracking().Include(p => p.User).FirstOrDefaultAsync(u => u.UserId == currentUserId); // cái này là lấy UserId từ Jwt token, nếu muốn lấy role thì thay nameIdentifier thành roles là được
             if (profile == null)
             {
-                return NotFound("Chưa có hồ sơ");
+                return NotFound(new ApiError(ApiErrorCodes.NotFound, "Chưa có hồ sơ"));
             }
             var res = new EmployerProfileResDTO
             {
@@ -46,7 +48,8 @@ namespace backend.Controllers
                 Phone = profile.Phone,
                 Email = profile.User.Email,
                 Field = profile.Field,
-                IsVerified = profile.IsVerified
+                IsVerified = profile.IsVerified,
+                UnverifyReason = profile.UnverifyReason
             };
             return Ok(res);
         }
@@ -56,17 +59,41 @@ namespace backend.Controllers
         [HttpPut("me")]
         public async Task<IActionResult> UpdateEmployerProfile(EmployerProfileReq dto)
         {
+            try { return await UpdateEmployerProfileOnce(dto); }
+            catch (Exception ex) when (DbErrors.IsDeadlock(ex))
+            {
+                // phòng hờ: MySQL đã rollback tx nạn nhân, tracker còn entity cũ -> xóa rồi làm lại 1 lần
+                _context.ChangeTracker.Clear();
+                return await UpdateEmployerProfileOnce(dto);
+            }
+        }
+
+        private async Task<IActionResult> UpdateEmployerProfileOnce(EmployerProfileReq dto)
+        {
+            if (dto.FoundedYear > VnTime.Today().Year)
+            {
+                return BadRequest(new ApiError(ApiErrorCodes.ValidationError, "Dữ liệu không hợp lệ",
+                    new Dictionary<string, string[]> { ["foundedYear"] = new[] { "Năm thành lập phải từ 1800 đến năm hiện tại" } }));
+            }
+
             string currentUserId = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
-            var profile = await _context.Employerprofiles.FirstOrDefaultAsync(u => u.UserId == currentUserId); // cái này là lấy UserId từ Jwt token, nếu muốn lấy role thì thay nameIdentifier thành roles là được
+            // READ COMMITTED: REPEATABLE READ khiến FOR UPDATE trên dòng chưa tồn tại lấy gap lock -> 2 employer khác nhau tạo hồ sơ lần đầu deadlock (F-4).
+            // Khóa ghi dòng profile tới khi commit: admin verify (UPDATE có điều kiện tên/MST theo view) phải chờ PUT xong hoặc chạy trước hẳn,
+            // nếu không PUT ghi đè tên/MST lên dòng đã verify (PLAN_Admin 3.3, I-1). Return sớm -> dispose tx -> rollback.
+            // ToListAsync, không FirstOrDefault: EF bọc câu SQL vào subquery + LIMIT, FOR UPDATE nằm trong derived table
+            await using var tx = await _context.Database.BeginTransactionAsync(System.Data.IsolationLevel.ReadCommitted);
+            var profile = (await _context.Employerprofiles
+                .FromSqlInterpolated($"SELECT * FROM employerprofile WHERE userId = {currentUserId} FOR UPDATE")
+                .ToListAsync()).FirstOrDefault();
 
             //check trùng cho cả tạo mới lẫn sửa (trước đây chỉ check ở nhánh sửa -> tạo mới bị trùng tax code / 500 khi trùng tên)
             var duplicateName = await _context.Employerprofiles
                 .AnyAsync(e => e.CompanyName == dto.CompanyName && e.UserId != currentUserId);
-            if (duplicateName) return Conflict(new { message = "This company name is already in use." });
+            if (duplicateName) return Conflict(new ApiError(ApiErrorCodes.CompanyNameTaken, "Tên công ty này đã được sử dụng"));
 
             var duplicateTax = await _context.Employerprofiles
                 .AnyAsync(e => e.TaxCode == dto.TaxCode && e.UserId != currentUserId);
-            if (duplicateTax) return Conflict(new { message = "This tax code is already in use." });
+            if (duplicateTax) return Conflict(new ApiError(ApiErrorCodes.TaxCodeTaken, "Mã số thuế này đã được sử dụng"));
 
             //không thấy profile thì thêm mới
             if (profile == null)
@@ -93,9 +120,9 @@ namespace backend.Controllers
                 if (profile.IsVerified)
                 {
                     if (dto.CompanyName != profile.CompanyName)
-                        return Conflict(new { message = "Your company is verified, so the company name can't be changed. Please contact support." });
+                        return Conflict(new ApiError(ApiErrorCodes.CompanyNameLocked, "Công ty đã được xác minh nên không thể đổi tên công ty. Vui lòng liên hệ hỗ trợ"));
                     if (dto.TaxCode != profile.TaxCode)
-                        return Conflict(new { message = "Your company is verified, so the tax code can't be changed. Please contact support." });
+                        return Conflict(new ApiError(ApiErrorCodes.TaxCodeLocked, "Công ty đã được xác minh nên không thể đổi mã số thuế. Vui lòng liên hệ hỗ trợ"));
                 }
 
                 profile.CompanyName = dto.CompanyName;
@@ -111,11 +138,15 @@ namespace backend.Controllers
             try
             {
                 await _context.SaveChangesAsync();
+                await tx.CommitAsync();
             }
-            catch (DbUpdateException)
+            catch (DbUpdateException ex) when (ex.InnerException is MySqlException { ErrorCode: MySqlErrorCode.DuplicateKeyEntry } dup)
             {
-                //2 request cùng lúc lọt qua bước check trùng -> unique index companyName chặn lại, trả 409 thay vì 500
-                return Conflict(new { message = "This company name is already in use." });
+                // 2 request cùng lúc lọt qua bước check trùng -> unique index chặn lại, trả 409 thay vì 500.
+                // MySQL báo "Duplicate entry '...' for key 'employerprofile.<tên index>'" -> dựa vào tên index để biết trùng cột nào
+                return dup.Message.Contains("'employerprofile.taxCode'")
+                    ? Conflict(new ApiError(ApiErrorCodes.TaxCodeTaken, "Mã số thuế này đã được sử dụng"))
+                    : Conflict(new ApiError(ApiErrorCodes.CompanyNameTaken, "Tên công ty này đã được sử dụng"));
             }
             return Ok(profile);
         }
@@ -128,7 +159,7 @@ namespace backend.Controllers
             var profile = await _context.Employerprofiles.Include(p => p.User).FirstOrDefaultAsync(u => u.UserId == currentUserId); // cái này là lấy UserId từ Jwt token, nếu muốn lấy role thì thay nameIdentifier thành roles là được
             if (profile == null)
             {
-                return NotFound("Chưa có hồ sơ");
+                return NotFound(new ApiError(ApiErrorCodes.NotFound, "Chưa có hồ sơ"));
             }
             string logoFolder = $"WorkHub/employer/logo/{profile.UserId}"; //tách theo từng employer, trước đây để chung 1 folder cho mọi employer
             string logoPublicId = $"{logoFolder}/{profile.User.Username}_Logo"; //cố định theo user -> upload sau sẽ ghi đè đúng file này, không tạo file mới
@@ -136,7 +167,7 @@ namespace backend.Controllers
             var result = await _fileUploadService.Upload_CV_AVT(avatar, logoFolder, logoPublicId, new[] { ".jpg", ".png" }, 5 * 1024 * 1024);
             if (!result.IsSuccess)
             {
-                return BadRequest(result.ErrorMessage);
+                return BadRequest(new ApiError(ApiErrorCodes.ValidationError, result.ErrorMessage!));
             }
 
             profile.Logo = result.Url;

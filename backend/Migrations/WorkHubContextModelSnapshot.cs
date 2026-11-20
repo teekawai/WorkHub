@@ -122,6 +122,11 @@ namespace backend.Migrations
                         .HasColumnType("varchar(15)")
                         .HasColumnName("taxCode");
 
+                    b.Property<string>("UnverifyReason")
+                        .HasMaxLength(500)
+                        .HasColumnType("varchar(500)")
+                        .HasColumnName("unverifyReason");
+
                     b.Property<string>("Website")
                         .HasMaxLength(255)
                         .HasColumnType("varchar(255)")
@@ -131,6 +136,9 @@ namespace backend.Migrations
                         .HasName("PRIMARY");
 
                     b.HasIndex(new[] { "CompanyName" }, "companyName")
+                        .IsUnique();
+
+                    b.HasIndex(new[] { "TaxCode" }, "taxCode")
                         .IsUnique();
 
                     b.ToTable("employerprofile", (string)null);
@@ -233,8 +241,8 @@ namespace backend.Migrations
                         .HasColumnType("datetime")
                         .HasColumnName("createdAt");
 
-                    b.Property<DateTime>("Deadline")
-                        .HasColumnType("datetime")
+                    b.Property<DateOnly>("Deadline")
+                        .HasColumnType("date")
                         .HasColumnName("deadline");
 
                     b.Property<string>("Description")
@@ -275,6 +283,7 @@ namespace backend.Migrations
                         .HasColumnName("skillRequired");
 
                     b.Property<string>("Status")
+                        .IsConcurrencyToken()
                         .IsRequired()
                         .HasMaxLength(20)
                         .HasColumnType("varchar(20)")
@@ -299,6 +308,8 @@ namespace backend.Migrations
                         .HasName("PRIMARY");
 
                     b.HasIndex(new[] { "EmployerId" }, "fk_job_employer");
+
+                    b.HasIndex(new[] { "Status", "Deadline" }, "ix_job_status_deadline");
 
                     b.ToTable("job", (string)null);
                 });

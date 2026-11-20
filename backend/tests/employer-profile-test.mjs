@@ -477,6 +477,9 @@ async function runTests() {
       `No token: expected 401, got ${r.status}`);
   }
 
+  // ─────────── P23-P26: unique index taxCode / companyName + mật khẩu 8 ký tự ──
+  await runUniqueAndPasswordTests();
+
   // ─── Summary ─────────────────────────────────────────────────
   console.log("\n" + "═".repeat(70));
   console.log(`  📊  SUMMARY: ${passCount} PASS │ ${failCount} FAIL │ ${skipCount} SKIP │ Total: ${results.length}`);
@@ -489,6 +492,103 @@ async function runTests() {
     }
   }
   console.log();
+}
+
+// ─── P23-P26: race trên unique index + rule mật khẩu ───────────
+// Dùng helper sql của job-test để đối chiếu DB và tự dọn dữ liệu (email qa_uq_${TS}_*).
+async function runUniqueAndPasswordTests() {
+  const { sql, sqlInt } = await import("./job-test/lib.mjs");
+  const ROUNDS = 10;
+  // rate limit auth 100 req/phút/IP: chờ sang cửa sổ mới trước mỗi nhóm tạo ~40 user
+  const newWindow = () => new Promise((r) => setTimeout(r, 61000));
+  const emailLike = `qa_uq_${TS}_%@test.com`;
+  const mkEmp = async (tag) => {
+    const email = `qa_uq_${TS}_${tag}@test.com`;
+    await raw("POST", "/auth/register", { body: { username: `qa_uq_${TS}_${tag}`.slice(0, 50), email, password: "Test1234!", role: "employer" } });
+    const l = await raw("POST", "/auth/login", { body: { email, password: "Test1234!", rememberMe: false } });
+    if (!l.data?.accessToken) throw new Error(`login ${tag} fail ${l.status}`);
+    return authHeader(l.data.accessToken);
+  };
+  const profile = (name, tax) => ({ ...validProfile({ companyName: name, taxCode: tax }) });
+  // taxCode 10 số, khác dải của các test trước (TS+0..11)
+  const tax = (i, k) => `${String(TS).slice(-7)}${String(i).padStart(2, "0")}${k}`.slice(0, 10);
+
+  try {
+    // ─── P23: cùng taxCode, khác tên, đồng thời → đúng 1x200 + 1x409 TAX_CODE_TAKEN ──
+    {
+      await newWindow();
+      let bad = [];
+      for (let i = 0; i < ROUNDS; i++) {
+        const [a, b] = [await mkEmp(`t${i}a`), await mkEmp(`t${i}b`)];
+        const tc = tax(i, 1);
+        const rs = await Promise.all([
+          raw("PUT", "/employer/me", { body: profile(`UqTaxA_${TS}_${i}`, tc), headers: a }),
+          raw("PUT", "/employer/me", { body: profile(`UqTaxB_${TS}_${i}`, tc), headers: b }),
+        ]);
+        const ok = rs.filter((r) => r.status === 200).length;
+        const dup = rs.filter((r) => r.status === 409 && r.data?.code === "TAX_CODE_TAKEN").length;
+        const inDb = sqlInt(`SELECT COUNT(*) FROM employerprofile WHERE taxCode='${tc}'`);
+        if (ok !== 1 || dup !== 1 || inDb !== 1) bad.push(`vòng ${i}: ${rs.map((r) => `${r.status}/${r.data?.code}`).join(",")} db=${inDb}`);
+      }
+      log("P23", bad.length === 0 ? "PASS" : "FAIL",
+        `Race cùng taxCode ×${ROUNDS}: đúng 1x200 + 1x409 TAX_CODE_TAKEN, DB 1 dòng. ${bad.join(" | ")}`);
+    }
+
+    // ─── P24: cùng companyName, khác taxCode, đồng thời → 1x200 + 1x409 COMPANY_NAME_TAKEN ──
+    {
+      await newWindow();
+      let bad = [];
+      for (let i = 0; i < ROUNDS; i++) {
+        const [a, b] = [await mkEmp(`n${i}a`), await mkEmp(`n${i}b`)];
+        const name = `UqName_${TS}_${i}`;
+        const rs = await Promise.all([
+          raw("PUT", "/employer/me", { body: profile(name, tax(i, 2)), headers: a }),
+          raw("PUT", "/employer/me", { body: profile(name, tax(i, 3)), headers: b }),
+        ]);
+        const ok = rs.filter((r) => r.status === 200).length;
+        const dup = rs.filter((r) => r.status === 409 && r.data?.code === "COMPANY_NAME_TAKEN").length;
+        const inDb = sqlInt(`SELECT COUNT(*) FROM employerprofile WHERE companyName='${name}'`);
+        if (ok !== 1 || dup !== 1 || inDb !== 1) bad.push(`vòng ${i}: ${rs.map((r) => `${r.status}/${r.data?.code}`).join(",")} db=${inDb}`);
+      }
+      log("P24", bad.length === 0 ? "PASS" : "FAIL",
+        `Race cùng companyName ×${ROUNDS}: đúng 1x200 + 1x409 COMPANY_NAME_TAKEN, DB 1 dòng. ${bad.join(" | ")}`);
+    }
+
+    // ─── P25: tuần tự trùng taxCode → 409 TAX_CODE_TAKEN (đường check trước khi lưu) ──
+    {
+      const [a, b] = [await mkEmp("seqa"), await mkEmp("seqb")];
+      const tc = tax(99, 4);
+      const r1 = await raw("PUT", "/employer/me", { body: profile(`UqSeqA_${TS}`, tc), headers: a });
+      const r2 = await raw("PUT", "/employer/me", { body: profile(`UqSeqB_${TS}`, tc), headers: b });
+      log("P25", r1.status === 200 && r2.status === 409 && r2.data?.code === "TAX_CODE_TAKEN" ? "PASS" : "FAIL",
+        `Tuần tự trùng taxCode: ${r1.status}, rồi ${r2.status}/${r2.data?.code} (expect 200 rồi 409/TAX_CODE_TAKEN)`);
+    }
+
+    // ─── P26: mật khẩu tối thiểu 8 ký tự ──
+    {
+      const em = (t) => `qa_uq_${TS}_pw${t}@test.com`;
+      const r7 = await raw("POST", "/auth/register", { body: { username: `qa_uq_${TS}_pw7`, email: em(7), password: "Abcd12!", role: "finder" } });
+      log("P26.1", r7.status === 400 && /8 ký tự/.test(JSON.stringify(r7.data)) ? "PASS" : "FAIL",
+        `Register 7 ký tự: expected 400 + message 8 ký tự, got ${r7.status} ${JSON.stringify(r7.data)?.slice(0, 120)}`);
+      const r8 = await raw("POST", "/auth/register", { body: { username: `qa_uq_${TS}_pw8`, email: em(8), password: "Abcd123!", role: "finder" } });
+      log("P26.2", r8.status === 200 || r8.status === 201 ? "PASS" : "FAIL",
+        `Register 8 ký tự: expected thành công, got ${r8.status} ${JSON.stringify(r8.data)?.slice(0, 120)}`);
+      const l7 = await raw("POST", "/auth/login", { body: { email: em(8), password: "Abcd12!", rememberMe: false } });
+      log("P26.3", l7.status === 400 ? "PASS" : "FAIL", `Login 7 ký tự: expected 400, got ${l7.status}`);
+    }
+  } catch (e) {
+    log("P23-26", "FAIL", `Lỗi ngoài dự kiến: ${e.message}`);
+  } finally {
+    // Dọn dữ liệu do P23-P26 tạo
+    try {
+      const ids = `SELECT userId FROM (SELECT userId FROM users WHERE email LIKE '${emailLike}') t`;
+      sql(`DELETE FROM refreshToken WHERE userId IN (${ids})`);
+      sql(`DELETE FROM employerprofile WHERE userId IN (${ids})`);
+      sql(`DELETE FROM finderprofile WHERE userId IN (${ids})`);
+      sql(`DELETE FROM users WHERE email LIKE '${emailLike}'`);
+      console.log(`   🧹 P23-26 cleanup: còn ${sqlInt(`SELECT COUNT(*) FROM users WHERE email LIKE '${emailLike}'`)} user`);
+    } catch (e) { console.log("   ⚠️ cleanup P23-26 lỗi:", e.message); }
+  }
 }
 
 // ─── Run ────────────────────────────────────────────────────────

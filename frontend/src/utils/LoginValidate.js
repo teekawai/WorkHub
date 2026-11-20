@@ -6,9 +6,9 @@ const validateLogin = ({email, password}) =>{
     }
 
     if (!password) {
-        return "Password không được để trống!"
-    } else if (password.length < 6) {
-        return "Mật khẩu cần ít nhất 6 ký tự!"
+        return "Mật khẩu không được để trống!"
+    } else if (password.length < 8) {
+        return "Mật khẩu cần ít nhất 8 ký tự!"
     }
 
 }

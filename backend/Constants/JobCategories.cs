@@ -4,7 +4,7 @@ namespace backend.Constants
 {
     /// <summary>
     /// Danh sách Category (cha) -> SubCategory (con) cố định cho Job.
-    /// Nguồn: PLAN_Job_Categories.md — PHẢI khớp y hệt với src/constants/jobCategories.js bên frontend.
+    /// Nguồn: PLAN_Job_Categories.md. FE không giữ bản sao, lấy qua GET /api/jobs/options (Business 6.4.1).
     /// Dùng để validate Category + SubCategory trong JobService (SubCategory phải thuộc đúng Category đã chọn).
     /// </summary>
     public static class JobCategories
