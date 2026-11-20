@@ -317,8 +317,9 @@ async function cleanup() {
   // chỉ xoá key idem của userId do run này tạo
   try {
     let n = 0;
-    for (const id of ids) { const ks = await redisCmd("KEYS", `idem:${id}:*`); if (ks.length) { await redisCmd("DEL", ...ks); n += ks.length; } }
-    console.log(`🧹 Redis: đã xoá ${n} key idem của run`);
+    // cache hồ sơ (Bước 11): khóa profile:*:{userId} của user do run tạo
+    for (const id of ids) { const ks = [...(await redisCmd("KEYS", `idem:${id}:*`)), `profile:employer:${id}`, `profile:finder:${id}`]; await redisCmd("DEL", ...ks); n += ks.length; }
+    console.log(`🧹 Redis: đã gửi DEL ${n} key idem + profile của run`);
   } catch (e) { console.log("⚠️ Redis cleanup lỗi:", e.message); }
   const l = ids.map((i) => `'${i}'`).join(",");
   try {

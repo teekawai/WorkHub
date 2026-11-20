@@ -250,8 +250,8 @@ function cleanSql() {
 export async function cleanAttack() {
   try {
     for (const id of userIdsOfRun()) {
-      const ks = await redisCmd("KEYS", `idem:${id}:*`);
-      if (ks.length) await redisCmd("DEL", ...ks);
+      const ks = [...(await redisCmd("KEYS", `idem:${id}:*`)), `profile:employer:${id}`, `profile:finder:${id}`]; // + cache hồ sơ (Bước 11)
+      await redisCmd("DEL", ...ks);
     }
   } catch (e) { console.log("⚠️ Redis cleanup lỗi:", e.message); }
   cleanSql();
