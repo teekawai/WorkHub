@@ -3,6 +3,7 @@ using backend.DTO;
 using backend.DTO.FinderProfileDTO;
 using backend.Models;
 using backend.Services.files;
+using backend.Services.cache;
 using Microsoft.AspNetCore.RateLimiting;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
@@ -21,11 +22,13 @@ namespace backend.Controllers
         //dependency injection
         private readonly WorkHubContext _context;
         private readonly IFileUploadService _fileUploadService;
+        private readonly IProfileCache _cache;
         
-        public FinderController(WorkHubContext _context, IFileUploadService fileUploadService)
+        public FinderController(WorkHubContext _context, IFileUploadService fileUploadService, IProfileCache cache)
         {
             this._context = _context;
             this._fileUploadService = fileUploadService;
+            _cache = cache;
         }
 
         private string getUserId()
@@ -37,10 +40,13 @@ namespace backend.Controllers
         public async Task<IActionResult> FinderProfile()
         {
             string currentUserId = getUserId();
+            // cache-aside: hit trả DTO qua cùng formatter như miss; chỉ cache DTO, không cache entity (có User -> PasswordHash)
+            var cached = await _cache.GetAsync<FinderProfileResponseDTO>(ProfileRoles.Finder, currentUserId);
+            if (cached != null) return Ok(cached);
             var profile = await _context.Finderprofiles.AsNoTracking().Include(p => p.User).FirstOrDefaultAsync(u => u.UserId == currentUserId);
             if (profile == null)
             {
-                return NotFound(new ApiError(ApiErrorCodes.NotFound, "Chưa có hồ sơ"));
+                return NotFound(new ApiError(ApiErrorCodes.NotFound, "Chưa có hồ sơ")); // không cache 404
             }
             var res = new FinderProfileResponseDTO
             {
@@ -59,6 +65,7 @@ namespace backend.Controllers
                 DateOfBirth = profile.DateOfBirth,
                 Gender = profile.Gender
             };
+            await _cache.SetAsync(ProfileRoles.Finder, currentUserId, res);
             return Ok(res);
         }
 
@@ -111,6 +118,7 @@ namespace backend.Controllers
                 return Conflict(new ApiError(ApiErrorCodes.Conflict, "Lỗi cập nhật hồ sơ hoặc xung đột dữ liệu"));
             }
 
+            await _cache.RemoveAsync(ProfileRoles.Finder, currentUserId);
             return Ok(profile);
         }
 
@@ -144,6 +152,7 @@ namespace backend.Controllers
                 await _fileUploadService.DeleteFileAsync(avatarPublicId);
                 return StatusCode(500, new ApiError(ApiErrorCodes.InternalError, "Lỗi khi lưu avatar vào cơ sở dữ liệu"));
             }
+            await _cache.RemoveAsync(ProfileRoles.Finder, currentUserId);
             return Ok(result.Url);
         }
 
@@ -177,6 +186,7 @@ namespace backend.Controllers
                 await _fileUploadService.DeleteFileAsync(CVpublicId, isRaw: true);
                 return StatusCode(500, new ApiError(ApiErrorCodes.InternalError, "Lỗi khi lưu CV vào cơ sở dữ liệu"));
             }
+            await _cache.RemoveAsync(ProfileRoles.Finder, currentUserId);
             return Ok(result.Url);
         }
     }
