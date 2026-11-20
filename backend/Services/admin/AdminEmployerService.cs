@@ -1,6 +1,7 @@
 using backend.Common;
 using backend.DTO.AdminDTO;
 using backend.Repositories;
+using backend.Services.cache;
 
 namespace backend.Services.admin
 {
@@ -8,8 +9,13 @@ namespace backend.Services.admin
     {
         private const int MaxReasonLength = 500;
         private readonly IEmployerRepository _repo;
+        private readonly IProfileCache _cache;
 
-        public AdminEmployerService(IEmployerRepository repo) => _repo = repo;
+        public AdminEmployerService(IEmployerRepository repo, IProfileCache cache)
+        {
+            _repo = repo;
+            _cache = cache;
+        }
 
         //tìm kiếm danh các công ty theo từ khóa trong tên
         public async Task<ServiceResult<PagedResult<AdminEmployerListItemDTO>>> SearchAsync(AdminEmployerQueryDTO query)
@@ -44,6 +50,14 @@ namespace backend.Services.admin
         //Xác minh công ty
         public async Task<ServiceResult<string>> VerifyAsync(string userId, VerifyRequestDTO request)
         {
+            var result = await VerifyCoreAsync(userId, request);
+            // mọi nhánh Success (kể cả "đã verify", xen giữa, thử lại) đều xóa cache hồ sơ; repo đã commit xong
+            if (result.IsSuccess) await _cache.RemoveAsync(ProfileRoles.Employer, userId);
+            return result;
+        }
+
+        private async Task<ServiceResult<string>> VerifyCoreAsync(string userId, VerifyRequestDTO request)
+        {
             var errors = new Dictionary<string, string[]>();
             if (string.IsNullOrWhiteSpace(request.CompanyName)) errors["companyName"] = new[] { "Thiếu tên công ty đang xem" };
             if (string.IsNullOrWhiteSpace(request.TaxCode)) errors["taxCode"] = new[] { "Thiếu mã số thuế đang xem" };
@@ -73,6 +87,13 @@ namespace backend.Services.admin
         }
 
         public async Task<ServiceResult<UnverifyResultDTO>> UnverifyAsync(string userId, UnverifyRequestDTO request)
+        {
+            var result = await UnverifyCoreAsync(userId, request);
+            if (result.IsSuccess) await _cache.RemoveAsync(ProfileRoles.Employer, userId);
+            return result;
+        }
+
+        private async Task<ServiceResult<UnverifyResultDTO>> UnverifyCoreAsync(string userId, UnverifyRequestDTO request)
         {
             // validation trước khi xem trạng thái
             var reason = request.Reason?.Trim();
