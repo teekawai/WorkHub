@@ -5,6 +5,7 @@ using backend.DTO.FinderProfileDTO;
 using backend.Models;
 using Microsoft.AspNetCore.RateLimiting;
 using backend.Services.files;
+using backend.Services.cache;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
@@ -21,20 +22,25 @@ namespace backend.Controllers
     {
         private readonly WorkHubContext _context;
         private readonly IFileUploadService _fileUploadService;
-        public EmployerController(WorkHubContext context, IFileUploadService fileUploadService)
+        private readonly IProfileCache _cache;
+        public EmployerController(WorkHubContext context, IFileUploadService fileUploadService, IProfileCache cache)
         {
             _context = context;
             _fileUploadService = fileUploadService;
+            _cache = cache;
         }
 
         [HttpGet("me")]
         public async Task<IActionResult> GetEmployerProfile()
         {
             string currentUserId = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
+            // cache-aside: hit trả DTO qua cùng formatter như miss; chỉ cache DTO, không cache entity (có User -> PasswordHash)
+            var cached = await _cache.GetAsync<EmployerProfileResDTO>(ProfileRoles.Employer, currentUserId);
+            if (cached != null) return Ok(cached);
             var profile = await _context.Employerprofiles.AsNoTracking().Include(p => p.User).FirstOrDefaultAsync(u => u.UserId == currentUserId); // cái này là lấy UserId từ Jwt token, nếu muốn lấy role thì thay nameIdentifier thành roles là được
             if (profile == null)
             {
-                return NotFound(new ApiError(ApiErrorCodes.NotFound, "Chưa có hồ sơ"));
+                return NotFound(new ApiError(ApiErrorCodes.NotFound, "Chưa có hồ sơ")); // không cache 404
             }
             var res = new EmployerProfileResDTO
             {
@@ -51,6 +57,7 @@ namespace backend.Controllers
                 IsVerified = profile.IsVerified,
                 UnverifyReason = profile.UnverifyReason
             };
+            await _cache.SetAsync(ProfileRoles.Employer, currentUserId, res);
             return Ok(res);
         }
 
@@ -148,6 +155,7 @@ namespace backend.Controllers
                     ? Conflict(new ApiError(ApiErrorCodes.TaxCodeTaken, "Mã số thuế này đã được sử dụng"))
                     : Conflict(new ApiError(ApiErrorCodes.CompanyNameTaken, "Tên công ty này đã được sử dụng"));
             }
+            await _cache.RemoveAsync(ProfileRoles.Employer, currentUserId); // sau commit, không trước
             return Ok(profile);
         }
 
@@ -172,6 +180,7 @@ namespace backend.Controllers
 
             profile.Logo = result.Url;
             await _context.SaveChangesAsync();
+            await _cache.RemoveAsync(ProfileRoles.Employer, currentUserId);
             return Ok(result.Url);
         }
     }
