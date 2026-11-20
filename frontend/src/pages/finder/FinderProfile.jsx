@@ -6,7 +6,7 @@ import ConfirmDialog from "../../components/shared/ConfirmDialog"
 import Button from "../../components/shared/Button"
 import CvUploadCard from "../../components/finder/CvUploadCard"
 import validateFinderProfile from "../../utils/FinderProfileValidate"
-import { useAuth } from "../../context/AuthContext"
+import { useAuth } from "../../context/useAuth"
 
 //Các field người dùng được sửa (email và avatar/cv không nằm trong form này)
 const FIELDS = ["fullname", "phone", "dateOfBirth", "gender", "address", "linkedIn", "educationLevel", "major", "skill", "description", "experience"]
@@ -35,7 +35,7 @@ function FinderProfile() {
     const [profile, setProfile] = useState(null)
     const [status, setStatus] = useState("loading")
     const [errorMsg, setErrorMsg] = useState("")
-    const [reloadKey, setReloadKey] = useState(0) //đổi số này để effect chạy lại (nút Try again)
+    const [reloadKey, setReloadKey] = useState(0) //đổi số này để effect chạy lại (nút Thử lại)
 
     const [isEditing, setIsEditing] = useState(false)
     const [draft, setDraft] = useState(() => toDraft(null)) //bản sao đang gõ dở, Cancel thì bỏ
@@ -106,7 +106,7 @@ function FinderProfile() {
         const found = validateFinderProfile(draft)
         if (Object.keys(found).length > 0) {
             setErrors(found)
-            toast.error("Please fix the highlighted fields.", { id: "profile-save" })
+            toast.error("Vui lòng sửa các trường được đánh dấu.", { id: "profile-save" })
             return
         }
         setConfirm("save")
@@ -123,7 +123,7 @@ function FinderProfile() {
                 setStatus("ready")
             }
             setIsEditing(false)
-            toast.success("Profile saved.", { id: "profile-save" })
+            toast.success("Đã lưu hồ sơ.", { id: "profile-save" })
         } catch (err) {
             toast.error(getProfileMsg(err), { id: "profile-save" })
         } finally {
@@ -138,14 +138,14 @@ function FinderProfile() {
         setAvatarError("")
         const ext = file.name.slice(file.name.lastIndexOf(".")).toLowerCase()
         if (!AVATAR_EXT.includes(ext)) {
-            const msg = "Please choose a JPG or PNG image."
+            const msg = "Vui lòng chọn ảnh JPG hoặc PNG."
             setAvatarError(msg)
             toast.error(msg, { id: "avatar-upload" })
             return
         }
         if (file.size > AVATAR_MAX_SIZE) {
             const mb = (file.size / 1024 / 1024).toFixed(2)
-            const msg = `This image is ${mb}MB. The maximum size is ${AVATAR_MAX_SIZE / 1024 / 1024}MB.`
+            const msg = `Ảnh này nặng ${mb}MB. Dung lượng tối đa là ${AVATAR_MAX_SIZE / 1024 / 1024}MB.`
             setAvatarError(msg)
             toast.error(msg, { id: "avatar-upload" })
             return
@@ -156,7 +156,7 @@ function FinderProfile() {
             const found = validateFinderProfile(draft)
             if (Object.keys(found).length > 0) {
                 setErrors(found)
-                toast.error("Please fill in Full name and Phone (valid format) before adding a photo.", { id: "avatar-upload" })
+                toast.error("Vui lòng nhập họ tên và số điện thoại hợp lệ trước khi thêm ảnh.", { id: "avatar-upload" })
                 return
             }
         }
@@ -173,10 +173,10 @@ function FinderProfile() {
             const url = await uploadAvatar(file)
             setProfile((p) => ({ ...p, avatar: url }))
             updateUser({ avatar: url })
-            toast.success("Profile photo updated.", { id: "avatar-upload" })
+            toast.success("Đã cập nhật ảnh đại diện.", { id: "avatar-upload" })
         } catch (err) {
-            //400 từ BE kèm lý do cụ thể (dạng chuỗi) thì hiện luôn lý do đó, còn lại dùng câu chung theo status
-            const beMsg = err.response?.status === 400 && typeof err.response.data === "string" ? err.response.data : null
+            //400 từ BE kèm lý do cụ thể (data.message) thì hiện luôn lý do đó, còn lại dùng câu chung theo status
+            const beMsg = err.response?.status === 400 ? err.response.data?.message : null
             const msg = beMsg || getProfileMsg(err)
             setAvatarError(msg)
             toast.error(msg, { id: "avatar-upload" })
@@ -191,9 +191,9 @@ function FinderProfile() {
         <div className="mx-auto max-w-[1106px]">
             <header className="mb-6 flex flex-wrap items-end justify-between gap-4">
                 <div>
-                    <p className="text-xs font-medium uppercase tracking-wider text-blue-600">Profile</p>
-                    <h1 className="mt-1 text-3xl font-semibold tracking-tight text-slate-900">Your Profile</h1>
-                    <p className="mt-2 text-base text-slate-600">Your professional story, ready to share with the right opportunities.</p>
+                    <p className="text-xs font-medium uppercase tracking-wider text-blue-600">Hồ sơ</p>
+                    <h1 className="mt-1 text-3xl font-semibold tracking-tight text-slate-900">Hồ sơ của bạn</h1>
+                    <p className="mt-2 text-base text-slate-600">Câu chuyện nghề nghiệp của bạn, sẵn sàng đến với những cơ hội phù hợp.</p>
                 </div>
 
                 {showPaper && (
@@ -201,15 +201,15 @@ function FinderProfile() {
                         {isEditing ? (
                             <>
                                 <Button variant="secondary" onClick={askCancel} disabled={saving}>
-                                    Cancel
+                                    Hủy
                                 </Button>
                                 <Button variant="primary" onClick={askSave} disabled={saving}>
-                                    {saving ? "Saving…" : "Save changes"}
+                                    {saving ? "Đang lưu…" : "Lưu thay đổi"}
                                 </Button>
                             </>
                         ) : (
                             <Button variant="primary" onClick={startEdit}>
-                                Edit profile
+                                Chỉnh sửa hồ sơ
                             </Button>
                         )}
                     </div>
@@ -222,30 +222,30 @@ function FinderProfile() {
                     <div className="h-4 w-full rounded bg-slate-200" />
                     <div className="h-4 w-5/6 rounded bg-slate-200" />
                     <div className="h-4 w-2/3 rounded bg-slate-200" />
-                    <span className="sr-only">Loading your profile…</span>
+                    <span className="sr-only">Đang tải hồ sơ của bạn…</span>
                 </div>
             )}
 
             {status === "error" && (
                 <div role="alert" className="rounded-xl border border-red-100 bg-red-50 p-5">
-                    <p className="text-sm font-medium text-red-800">We couldn't load your profile</p>
+                    <p className="text-sm font-medium text-red-800">Không thể tải hồ sơ của bạn</p>
                     <p className="mt-1 text-sm text-red-700">{errorMsg}</p>
                     <button
                         type="button"
                         onClick={retry}
                         className="mt-4 rounded-lg bg-red-600 px-4 py-2 text-sm font-medium text-white transition-colors hover:bg-red-700"
                     >
-                        Try again
+                        Thử lại
                     </button>
                 </div>
             )}
 
             {status === "empty" && !isEditing && (
                 <div className="rounded-2xl border border-dashed border-slate-300 bg-white px-6 py-14 text-center">
-                    <h2 className="text-lg font-semibold text-slate-900">You haven't created your profile yet</h2>
-                    <p className="mx-auto mt-1 max-w-sm text-sm text-slate-500">Add your details so recruiters can see your CV when you apply.</p>
+                    <h2 className="text-lg font-semibold text-slate-900">Bạn chưa tạo hồ sơ</h2>
+                    <p className="mx-auto mt-1 max-w-sm text-sm text-slate-500">Thêm thông tin của bạn để nhà tuyển dụng xem được CV khi bạn ứng tuyển.</p>
                     <Button variant="primary" onClick={startEdit} className="mt-6">
-                        Create your profile
+                        Tạo hồ sơ của bạn
                     </Button>
                 </div>
             )}
@@ -273,15 +273,15 @@ function FinderProfile() {
 
             <ConfirmDialog
                 open={confirm === "save"}
-                title="Save changes?"
-                message="Do you want to save your changes to your profile?"
+                title="Lưu thay đổi?"
+                message="Bạn có muốn lưu các thay đổi của hồ sơ không?"
                 onYes={doSave}
                 onNo={() => setConfirm(null)}
             />
             <ConfirmDialog
                 open={confirm === "cancel"}
-                title="Discard changes?"
-                message="Do you want to discard your changes? This can't be undone."
+                title="Hủy thay đổi?"
+                message="Bạn có muốn hủy các thay đổi không? Thao tác này không thể hoàn tác."
                 onYes={discardEdit}
                 onNo={() => setConfirm(null)}
             />

@@ -14,8 +14,13 @@ function FormField({
     hint, // ghi chú nhỏ dưới label, vd gợi ý định dạng
     readOnly = false,
     rows = 3,
+    min, // chỉ dùng cho type number/date
+    max,
 }) {
     const inputId = `field-${name}`
+    const hintId = `${inputId}-hint`
+    const errorId = `${inputId}-error`
+    const describedBy = [hint && hintId, error && errorId].filter(Boolean).join(" ") || undefined
     const borderClass = error ? "border-red-400" : "border-slate-300"
     const commonProps = {
         id: inputId,
@@ -24,6 +29,7 @@ function FormField({
         placeholder,
         readOnly,
         "aria-invalid": !!error,
+        "aria-describedby": describedBy,
         onChange: (e) => onChange(name, e.target.value),
         className: `${baseInputClass} ${borderClass} ${readOnly ? "cursor-not-allowed bg-slate-50 text-slate-500" : ""}`,
     }
@@ -33,15 +39,15 @@ function FormField({
             <label htmlFor={inputId} className="text-sm font-medium text-slate-700">
                 {label}
             </label>
-            {hint && <p className="mt-0.5 text-xs text-slate-400">{hint}</p>}
+            {hint && <p id={hintId} className="mt-0.5 text-xs text-slate-400">{hint}</p>}
 
             {type === "textarea" ? (
                 <textarea {...commonProps} rows={rows} />
             ) : (
-                <input {...commonProps} type={type} />
+                <input {...commonProps} type={type} min={min} max={max} />
             )}
 
-            {error && <p className="mt-1 text-xs text-red-600">{error}</p>}
+            {error && <p id={errorId} className="mt-1 text-xs text-red-600">{error}</p>}
         </div>
     )
 }

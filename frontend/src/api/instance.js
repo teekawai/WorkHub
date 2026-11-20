@@ -23,6 +23,7 @@ instance.interceptors.request.use((config)=>{
 //single-flight: nếu nhiều request cùng dính 401 một lúc thì chỉ gọi /auth/refresh ĐÚNG 1 lần,
 //các request còn lại chờ chung promise này. Tránh bắn nhiều refresh song song -> vượt rate limiter "auth" (429) -> bị đá ra login.
 let refreshPromise = null
+let redirecting = false //đã đổi href do hết phiên: chặn các request 401 còn lại redirect lần nữa
 
 const refreshAccessToken = () => {
     if (!refreshPromise) {
@@ -47,13 +48,21 @@ instance.interceptors.response.use(
     async (error) =>{
         if(error.response?.status ===401 && !error.config._retry){
             error.config._retry =true //đánh dấu lại để tránh gọi api vô hạn, nếu gặp lỗi lại sẽ bay luôn ra ngoài
+            //đọc role 1 lần TRƯỚC khi await: các request 401 cùng chờ chung refreshPromise, request đầu xóa currentUser rồi
+            //request sau mới vào catch sẽ đọc được undefined -> ghi đè redirect về /login (bug A-9). Admin về cổng đăng nhập riêng.
+            let role
+            try { role = JSON.parse(localStorage.getItem("currentUser"))?.role } catch { /* JSON hỏng: coi như không rõ role */ }
             try{
                 const newAccessToken = await refreshAccessToken()
                 error.config.headers.Authorization = `Bearer ${newAccessToken}` //gọi lại instance với access token mới
                 return instance(error.config)
             } catch(eRefresh){
-                localStorage.removeItem("currentUser")
-                window.location.href = "/login"
+                //request 401 tới muộn (currentUser đã bị xóa, role đọc ra undefined) không được ghi đè redirect của request đầu
+                if (!redirecting) {
+                    redirecting = true
+                    localStorage.removeItem("currentUser")
+                    window.location.href = role === "admin" ? "/admin/login" : "/login"
+                }
                 return Promise.reject(eRefresh)
             }
         }

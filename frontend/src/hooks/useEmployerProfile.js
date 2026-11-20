@@ -7,7 +7,7 @@ import {
     uploadLogo,
 } from "../api/employerProfile"
 import validateEmployerProfile from "../utils/EmployerProfileValidate"
-import { useAuth } from "../context/AuthContext"
+import { useAuth } from "../context/useAuth"
 
 //Các field người dùng được sửa qua form (email chỉ đọc, logo có luồng upload riêng)
 const FIELDS = ["companyName", "address", "description", "website", "field", "foundedYear", "phone", "taxCode"]
@@ -28,15 +28,18 @@ const toPayload = (draft) => ({
 const LOGO_MAX_SIZE = 2 * 1024 * 1024 //BE chỉ nhận ≤ 2MB, giống avatar bên Finder
 const LOGO_EXT = [".jpg", ".png"] //BE không nhận .jpeg
 
-//409 (Conflict) từ BE trả { message: "This company name is already in use." } hoặc "This tax code is already in use." (EmployerController.UpdateEmployerProfile)
-//-> soi message để biết lỗi thuộc field nào, gắn lỗi đúng chỗ (errors.taxCode / errors.companyName) thay vì chỉ toast chung chung
+//409 (Conflict) từ BE trả { code, message } (EmployerController.UpdateEmployerProfile)
+//-> dựa vào code để biết lỗi thuộc field nào, gắn lỗi đúng chỗ (errors.taxCode / errors.companyName) thay vì chỉ toast chung chung
+const CONFLICT_FIELDS = {
+    COMPANY_NAME_TAKEN: "companyName",
+    COMPANY_NAME_LOCKED: "companyName",
+    TAX_CODE_TAKEN: "taxCode",
+    TAX_CODE_LOCKED: "taxCode",
+}
 const getConflictField = (err) => {
     if (err.response?.status !== 409) return null
-    const msg = err.response?.data?.message
-    if (typeof msg !== "string") return null
-    if (msg.includes("tax code")) return { field: "taxCode", message: msg }
-    if (msg.includes("company name")) return { field: "companyName", message: msg }
-    return null
+    const field = CONFLICT_FIELDS[err.response.data?.code]
+    return field ? { field, message: err.response.data.message } : null
 }
 
 //Hook ôm toàn bộ state + logic của trang Company Profile: load/edit/save/upload logo.
@@ -116,7 +119,7 @@ function useEmployerProfile() {
         const found = validateEmployerProfile(draft)
         if (Object.keys(found).length > 0) {
             setErrors(found)
-            toast.error("Please fix the highlighted fields.", { id: "employer-profile-save" })
+            toast.error("Vui lòng sửa các trường được đánh dấu.", { id: "employer-profile-save" })
             return
         }
         setConfirm("save")
@@ -133,7 +136,7 @@ function useEmployerProfile() {
                 setStatus("ready")
             }
             setIsEditing(false)
-            toast.success("Company profile saved.", { id: "employer-profile-save" })
+            toast.success("Đã lưu hồ sơ công ty.", { id: "employer-profile-save" })
         } catch (err) {
             const conflict = getConflictField(err)
             if (conflict) {
@@ -153,14 +156,14 @@ function useEmployerProfile() {
         setLogoError("")
         const ext = file.name.slice(file.name.lastIndexOf(".")).toLowerCase()
         if (!LOGO_EXT.includes(ext)) {
-            const msg = "Please choose a JPG or PNG image."
+            const msg = "Vui lòng chọn ảnh JPG hoặc PNG."
             setLogoError(msg)
             toast.error(msg, { id: "logo-upload" })
             return
         }
         if (file.size > LOGO_MAX_SIZE) {
             const mb = (file.size / 1024 / 1024).toFixed(2)
-            const msg = `This image is ${mb}MB. The maximum size is ${LOGO_MAX_SIZE / 1024 / 1024}MB.`
+            const msg = `Ảnh này nặng ${mb}MB. Dung lượng tối đa là ${LOGO_MAX_SIZE / 1024 / 1024}MB.`
             setLogoError(msg)
             toast.error(msg, { id: "logo-upload" })
             return
@@ -171,7 +174,7 @@ function useEmployerProfile() {
             const found = validateEmployerProfile(draft)
             if (Object.keys(found).length > 0) {
                 setErrors(found)
-                toast.error("Please fill in the required company details before adding a logo.", { id: "logo-upload" })
+                toast.error("Vui lòng điền đủ thông tin công ty bắt buộc trước khi thêm logo.", { id: "logo-upload" })
                 return
             }
         }
@@ -188,15 +191,15 @@ function useEmployerProfile() {
             const url = await uploadLogo(file)
             setProfile((p) => ({ ...p, logo: url }))
             updateUser({ avatar: url })
-            toast.success("Company logo updated.", { id: "logo-upload" })
+            toast.success("Đã cập nhật logo công ty.", { id: "logo-upload" })
         } catch (err) {
-            //400 từ BE kèm lý do cụ thể (dạng chuỗi) thì hiện luôn lý do đó, còn lại dùng câu chung theo status
+            //400 từ BE kèm lý do cụ thể (data.message) thì hiện luôn lý do đó, còn lại dùng câu chung theo status
             //409 xảy ra khi profile chưa tồn tại và bước tạo row trước (updateEmployerProfile ở trên) bị trùng companyName/taxCode với người khác
             const conflict = getConflictField(err)
             if (conflict) {
                 setErrors((e) => ({ ...e, [conflict.field]: conflict.message }))
             }
-            const beMsg = err.response?.status === 400 && typeof err.response.data === "string" ? err.response.data : null
+            const beMsg = err.response?.status === 400 ? err.response.data?.message : null
             const msg = conflict?.message || beMsg || getEmployerProfileMsg(err)
             setLogoError(msg)
             toast.error(msg, { id: "logo-upload" })

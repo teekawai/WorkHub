@@ -1,5 +1,4 @@
 // ─── Category Grid ──────────────────────────────────────────────────────────
-// `count: null` = chưa có API → hiển thị placeholder "---"
 export const CATEGORIES = [
   {
     id: 1,
@@ -8,7 +7,6 @@ export const CATEGORIES = [
     color: 'bg-blue-50 text-blue-600',
     hoverColor: 'hover:bg-blue-600 hover:text-white',
     icon: 'it',
-    count: null,
   },
   {
     id: 2,
@@ -17,7 +15,6 @@ export const CATEGORIES = [
     color: 'bg-pink-50 text-pink-600',
     hoverColor: 'hover:bg-blue-600 hover:text-white',
     icon: 'marketing',
-    count: null,
   },
   {
     id: 3,
@@ -26,7 +23,6 @@ export const CATEGORIES = [
     color: 'bg-emerald-50 text-emerald-600',
     hoverColor: 'hover:bg-blue-600 hover:text-white',
     icon: 'finance',
-    count: null,
   },
   {
     id: 4,
@@ -35,7 +31,6 @@ export const CATEGORIES = [
     color: 'bg-violet-50 text-violet-600',
     hoverColor: 'hover:bg-blue-600 hover:text-white',
     icon: 'design',
-    count: null,
   },
   {
     id: 5,
@@ -44,7 +39,6 @@ export const CATEGORIES = [
     color: 'bg-orange-50 text-orange-600',
     hoverColor: 'hover:bg-blue-600 hover:text-white',
     icon: 'engineering',
-    count: null,
   },
   {
     id: 6,
@@ -53,7 +47,6 @@ export const CATEGORIES = [
     color: 'bg-yellow-50 text-yellow-600',
     hoverColor: 'hover:bg-blue-600 hover:text-white',
     icon: 'education',
-    count: null,
   },
   {
     id: 7,
@@ -62,7 +55,6 @@ export const CATEGORIES = [
     color: 'bg-red-50 text-red-500',
     hoverColor: 'hover:bg-blue-600 hover:text-white',
     icon: 'health',
-    count: null,
   },
   {
     id: 8,
@@ -71,7 +63,6 @@ export const CATEGORIES = [
     color: 'bg-teal-50 text-teal-600',
     hoverColor: 'hover:bg-blue-600 hover:text-white',
     icon: 'sales',
-    count: null,
   },
 ]
 

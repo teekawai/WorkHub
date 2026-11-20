@@ -1,9 +1,9 @@
-import { createContext, useCallback, useContext, useState } from "react"
+import { useCallback, useState } from "react"
+import { AuthContext } from "./authState"
 
 //Nguồn chân lý DUY NHẤT cho currentUser trong toàn app — thay cho việc vừa giữ state ở App.jsx
 //vừa có chỗ (ProtectedRoute) tự đọc thẳng localStorage, dễ lệch nhau sau khi login/logout.
 //Mọi nơi cần đọc/ghi currentUser đều qua useAuth(), không đọc localStorage trực tiếp nữa.
-const AuthContext = createContext(null)
 
 function AuthProvider({ children }) {
     const [currentUser, setCurrentUser] = useState(() => {
@@ -46,10 +46,4 @@ function AuthProvider({ children }) {
     return <AuthContext.Provider value={{ currentUser, login, logout, updateUser }}>{children}</AuthContext.Provider>
 }
 
-function useAuth() {
-    const ctx = useContext(AuthContext)
-    if (!ctx) throw new Error("useAuth() phải được gọi bên trong <AuthProvider>")
-    return ctx
-}
-
-export { AuthProvider, useAuth }
+export { AuthProvider }

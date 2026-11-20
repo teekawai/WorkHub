@@ -39,9 +39,9 @@ function EmployerProfile() {
     return (
         <div className="mx-auto max-w-[900px]">
             <header className="mb-6">
-                <p className="text-xs font-medium uppercase tracking-wider text-blue-600">Profile</p>
-                <h1 className="mt-1 text-3xl font-semibold tracking-tight text-slate-900">Company Profile</h1>
-                <p className="mt-2 text-base text-slate-600">How candidates see your company when you post a job.</p>
+                <p className="text-xs font-medium uppercase tracking-wider text-blue-600">Hồ sơ</p>
+                <h1 className="mt-1 text-3xl font-semibold tracking-tight text-slate-900">Hồ sơ công ty</h1>
+                <p className="mt-2 text-base text-slate-600">Cách ứng viên nhìn thấy công ty của bạn khi bạn đăng tin tuyển dụng.</p>
             </header>
 
             {status === "loading" && (
@@ -50,30 +50,30 @@ function EmployerProfile() {
                     <div className="h-4 w-full rounded bg-slate-200" />
                     <div className="h-4 w-5/6 rounded bg-slate-200" />
                     <div className="h-4 w-2/3 rounded bg-slate-200" />
-                    <span className="sr-only">Loading your company profile…</span>
+                    <span className="sr-only">Đang tải hồ sơ công ty của bạn…</span>
                 </div>
             )}
 
             {status === "error" && (
                 <div role="alert" className="rounded-xl border border-red-100 bg-red-50 p-5">
-                    <p className="text-sm font-medium text-red-800">We couldn't load your company profile</p>
+                    <p className="text-sm font-medium text-red-800">Không thể tải hồ sơ công ty của bạn</p>
                     <p className="mt-1 text-sm text-red-700">{errorMsg}</p>
                     <button
                         type="button"
                         onClick={retry}
                         className="mt-4 rounded-lg bg-red-600 px-4 py-2 text-sm font-medium text-white transition-colors hover:bg-red-700"
                     >
-                        Try again
+                        Thử lại
                     </button>
                 </div>
             )}
 
             {status === "empty" && !isEditing && (
                 <div className="rounded-2xl border border-dashed border-slate-300 bg-white px-6 py-14 text-center">
-                    <h2 className="text-lg font-semibold text-slate-900">You haven't set up your company profile yet</h2>
-                    <p className="mx-auto mt-1 max-w-sm text-sm text-slate-500">Add your company details so candidates know who they're applying to.</p>
+                    <h2 className="text-lg font-semibold text-slate-900">Bạn chưa thiết lập hồ sơ công ty</h2>
+                    <p className="mx-auto mt-1 max-w-sm text-sm text-slate-500">Thêm thông tin công ty để ứng viên biết họ đang ứng tuyển vào đâu.</p>
                     <Button variant="primary" onClick={startEdit} className="mt-6">
-                        Create your profile
+                        Tạo hồ sơ của bạn
                     </Button>
                 </div>
             )}
@@ -92,10 +92,10 @@ function EmployerProfile() {
 
                             <div className="mt-8 flex justify-end gap-2 border-t border-slate-100 pt-6">
                                 <Button variant="secondary" onClick={askCancel} disabled={saving}>
-                                    Cancel
+                                    Hủy
                                 </Button>
                                 <Button variant="primary" onClick={askSave} disabled={saving}>
-                                    {saving ? "Saving…" : "Save changes"}
+                                    {saving ? "Đang lưu…" : "Lưu thay đổi"}
                                 </Button>
                             </div>
                         </section>
@@ -114,15 +114,15 @@ function EmployerProfile() {
 
             <ConfirmDialog
                 open={confirm === "save"}
-                title="Save changes?"
-                message="Do you want to save your changes to your company profile?"
+                title="Lưu thay đổi?"
+                message="Bạn có muốn lưu các thay đổi của hồ sơ công ty không?"
                 onYes={doSave}
                 onNo={() => setConfirm(null)}
             />
             <ConfirmDialog
                 open={confirm === "cancel"}
-                title="Discard changes?"
-                message="Do you want to discard your changes? This can't be undone."
+                title="Hủy thay đổi?"
+                message="Bạn có muốn hủy các thay đổi không? Thao tác này không thể hoàn tác."
                 onYes={discardEdit}
                 onNo={() => setConfirm(null)}
             />

@@ -27,6 +27,13 @@ function GoogleRoleModal({ open, onClose, onAuthenticated, rememberMe = false })
     useEffect(() => { roleRef.current = role }, [role])
     useEffect(() => { rememberMeRef.current = rememberMe }, [rememberMe])
 
+    //reset lỗi cũ mỗi lần mở lại (không đụng tới GIS): chỉnh state ngay lúc render khi `open` đổi, cách React khuyên thay cho setState trong effect
+    const [prevOpen, setPrevOpen] = useState(open)
+    if (open !== prevOpen) {
+        setPrevOpen(open)
+        if (open) setError("")
+    }
+
     const handleCredentialResponse = async (response) => {
         setLoading(true)
         setError("")
@@ -50,7 +57,7 @@ function GoogleRoleModal({ open, onClose, onAuthenticated, rememberMe = false })
             setLoading(false)
         }
     }
-    handleCredentialResponseRef.current = handleCredentialResponse
+    useEffect(() => { handleCredentialResponseRef.current = handleCredentialResponse }) //cập nhật sau mỗi render (không ghi ref lúc render)
 
     //khởi tạo + render nút Google thật (ẩn) — CHỈ 1 LẦN khi component mount, không phụ thuộc `open`
     useEffect(() => {
@@ -99,9 +106,6 @@ function GoogleRoleModal({ open, onClose, onAuthenticated, rememberMe = false })
         return () => window.removeEventListener("keydown", onKey)
     }, [open, onClose])
 
-    useEffect(() => {
-        if (open) setError("") //reset lỗi cũ mỗi lần mở lại, không đụng tới GIS
-    }, [open])
 
     return (
         <div
