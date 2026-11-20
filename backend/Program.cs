@@ -129,6 +129,7 @@ builder.Services.AddScoped<UserRepository>();
 builder.Services.AddScoped<IJobRepository, JobRepository>();
 builder.Services.AddSingleton(TimeProvider.System);
 builder.Services.AddSingleton<IIdempotencyStore, RedisIdempotencyStore>();
+builder.Services.AddSingleton<backend.Services.cache.IProfileCache, backend.Services.cache.RedisProfileCache>();
 builder.Services.AddScoped<IJobService, JobService>();
 builder.Services.AddHostedService<JobAutoCloseService>();
 builder.Services.AddScoped<IJobSearchService, JobSearchService>();
