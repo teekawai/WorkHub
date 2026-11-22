@@ -58,13 +58,13 @@ function NavBar({ currentUser, transparent = false, isEmployer = false }) {
     }
 
     const finderLinks = [
-        { label: "Tìm việc làm", to: "#" },
+        { label: "Tìm việc làm", to: ROUTE_PATH.FINDER.JOBS },
         { label: "Việc đã ứng tuyển", to: ROUTE_PATH.FINDER.APPLICATIONS },
     ]
 
     const employerLinks = [
-        { label: "Đăng tin tuyển dụng", to: "#" },
-        { label: "Tin tuyển dụng của tôi", to: "#" },
+        { label: "Đăng tin tuyển dụng", to: ROUTE_PATH.EMPLOYER.JOB_NEW },
+        { label: "Tin tuyển dụng của tôi", to: ROUTE_PATH.EMPLOYER.JOBS },
         { label: "Xem ứng viên", to: "#" },
     ]
 
@@ -189,8 +189,9 @@ function NavBar({ currentUser, transparent = false, isEmployer = false }) {
 
             {/* Mobile menu */}
             {menuOpen && (
-                <div className="md:hidden border-t border-white/20 flex justify-end">
-                    <div className="w-1/3 bg-white shadow-lg rounded-bl-xl py-2 flex flex-col">
+                // nổi dưới nav (absolute) để thanh nav không bị kéo cao theo menu
+                <div className="md:hidden absolute right-0 top-full">
+                    <div className="w-56 bg-white shadow-lg rounded-bl-xl py-2 flex flex-col">
                         {navLinks.map((link) => (
                             <Link
                                 key={link.label}

@@ -16,8 +16,8 @@ function GeneralUserHome({currentUser}) {
       <main className="flex-1">
         {/* HeroSection đã có pt-36 để tránh bị navbar che nội dung */}
         <HeroSection />
-        <CategoryGrid />
         <JobListings />
+        <CategoryGrid />
         <CompanyMarquee />
         <StatsRow />
         <EmployerCTA />

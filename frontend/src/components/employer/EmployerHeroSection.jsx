@@ -1,4 +1,6 @@
 import { useState, useEffect } from 'react'
+import { useNavigate } from 'react-router-dom'
+import { ROUTE_PATH } from '../../routes/route'
 
 // ─── Icons ────────────────────────────────────────────────────────────────────
 const ArrowIcon = () => (
@@ -31,6 +33,7 @@ const BENEFITS = [
 
 function EmployerHeroSection() {
   const [visible, setVisible] = useState(false)
+  const navigate = useNavigate()
 
   useEffect(() => {
     const t = setTimeout(() => setVisible(true), 80)
@@ -73,11 +76,11 @@ function EmployerHeroSection() {
 
         {/* CTA buttons */}
         <div style={fadeUp(visible, 320)} className="flex flex-col sm:flex-row items-center justify-center gap-3 mb-12">
-          <button className="flex items-center gap-2 bg-white hover:bg-gray-100 text-gray-900 font-semibold text-sm px-7 py-3.5 rounded-xl shadow-lg shadow-black/20 transition-all duration-200 hover:scale-105 active:scale-[0.97]">
+          <button onClick={() => navigate(ROUTE_PATH.EMPLOYER.JOB_NEW)} className="flex items-center gap-2 bg-white hover:bg-gray-100 text-gray-900 font-semibold text-sm px-7 py-3.5 rounded-xl shadow-lg shadow-black/20 transition-all duration-200 hover:scale-105 active:scale-[0.97]">
             Đăng tin tuyển dụng
             <ArrowIcon />
           </button>
-          <button className="flex items-center gap-2 bg-transparent hover:bg-white/10 border border-white/30 hover:border-white/50 text-white font-semibold text-sm px-7 py-3.5 rounded-xl transition-all duration-200 hover:scale-105 active:scale-[0.97]">
+          <button onClick={() => document.getElementById('tinh-nang')?.scrollIntoView({ behavior: 'smooth' })} className="flex items-center gap-2 bg-transparent hover:bg-white/10 border border-white/30 hover:border-white/50 text-white font-semibold text-sm px-7 py-3.5 rounded-xl transition-all duration-200 hover:scale-105 active:scale-[0.97]">
             Tìm hiểu thêm
             <ArrowIcon />
           </button>

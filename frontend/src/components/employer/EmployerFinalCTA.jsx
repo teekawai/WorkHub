@@ -1,5 +1,6 @@
 import { useInView } from '../../hooks/useInView'
 import { useNavigate } from 'react-router-dom'
+import { ROUTE_PATH } from '../../routes/route'
 
 function EmployerFinalCTA() {
   const [ref, inView] = useInView()
@@ -28,7 +29,7 @@ function EmployerFinalCTA() {
           Đăng tin tuyển dụng ngay hôm nay — miễn phí, nhanh chóng, tiếp cận hàng nghìn ứng viên tiềm năng.
         </p>
         <button
-          onClick={() => navigate('#')}
+          onClick={() => navigate(ROUTE_PATH.EMPLOYER.JOB_NEW)}
           className="inline-flex items-center gap-2 bg-white hover:bg-gray-100 text-gray-900 font-semibold text-sm px-8 py-4 rounded-xl shadow-lg shadow-black/25 transition-all duration-200 hover:scale-105 active:scale-[0.97]"
         >
           Đăng tin tuyển dụng ngay
