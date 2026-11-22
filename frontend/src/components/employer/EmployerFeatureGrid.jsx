@@ -66,7 +66,7 @@ function EmployerFeatureGrid() {
   const [ref, inView] = useInView()
 
   return (
-    <section className="bg-[#0f1f3d] py-20 px-5">
+    <section id="tinh-nang" className="scroll-mt-16 bg-[#0f1f3d] py-20 px-5">
       {/* Section header */}
       <div
         className="text-center mb-12"

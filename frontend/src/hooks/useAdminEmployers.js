@@ -5,6 +5,7 @@ import { buildQuery, mergeSelected, validateReason } from "../utils/adminEmploye
 
 const TOAST_ID = "admin-employer-action"
 const SEARCH_DELAY = 300
+const ACTION_DELAY_MS = 1000 //chờ 1s trước khi gửi xác minh / thu hồi (user chốt 2026-11-20), nút hiện trạng thái đang xử lý
 
 //Hook ôm state trang Admin "Công ty": danh sách (tìm / lọc / phân trang), panel chi tiết, xác minh, thu hồi.
 //status: loading | ready | error. `selected` là snapshot công ty đang mở panel, người dùng tự đóng.
@@ -21,6 +22,7 @@ function useAdminEmployers() {
     const [selected, setSelected] = useState(null)
     const [busy, setBusy] = useState(false) //đang gọi verify / unverify
     const [unverifyOpen, setUnverifyOpen] = useState(false)
+    const [verifyOpen, setVerifyOpen] = useState(false) //hộp xác nhận Xác minh
     const [reasonError, setReasonError] = useState("")
     const [changedMsg, setChangedMsg] = useState(null) //null = dialog 409 đóng
     const [loadedKey, setLoadedKey] = useState("") //khóa của lần tải đã về, khác khóa hiện tại = đang tải lại
@@ -103,6 +105,7 @@ function useAdminEmployers() {
         busyRef.current = true
         setBusy(true)
         try {
+            await new Promise((resolve) => setTimeout(resolve, ACTION_DELAY_MS))
             await action()
         } finally {
             busyRef.current = false
@@ -110,8 +113,13 @@ function useAdminEmployers() {
         }
     }
 
+    //bấm Xác minh ở panel chỉ mở hộp xác nhận; xác nhận xong mới gọi API
+    const askVerify = () => setVerifyOpen(true)
+    const cancelVerify = () => setVerifyOpen(false)
+
     //gửi companyName / taxCode nguyên văn từ snapshot (từ GET), BE so khớp để phát hiện hồ sơ vừa đổi
     const verify = () => {
+        setVerifyOpen(false)
         const { userId } = selected //giữ id lúc bấm: panel có thể đã đổi sang công ty khác khi API về
         return guard(async () => {
             try {
@@ -178,7 +186,7 @@ function useAdminEmployers() {
         tab, setTab, keyword, setKeyword, search, clearFilters,
         items, pagination, page, setPage, status, fetching, errorMsg, retry,
         selected, openPanel, closePanel,
-        busy, verify,
+        busy, verify, verifyOpen, askVerify, cancelVerify,
         unverifyOpen, askUnverify, cancelUnverify, unverify, reasonError, clearReasonError,
         changedMsg, reloadAfterChanged,
     }
