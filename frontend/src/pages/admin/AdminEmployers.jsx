@@ -3,6 +3,7 @@ import Button from "../../components/shared/Button"
 import EmployerPanel, { Avatar, VerifyBadge } from "../../components/admin/EmployerPanel"
 import UnverifyDialog from "../../components/admin/UnverifyDialog"
 import ProfileChangedDialog from "../../components/admin/ProfileChangedDialog"
+import ConfirmDialog from "../../components/shared/ConfirmDialog"
 import { pageWindow } from "../../utils/pagination"
 
 const TABS = [
@@ -17,7 +18,7 @@ function AdminEmployers() {
         tab, setTab, keyword, setKeyword, search, clearFilters,
         items, pagination, page, setPage, status, fetching, errorMsg, retry,
         selected, openPanel, closePanel,
-        busy, verify,
+        busy, verify, verifyOpen, askVerify, cancelVerify,
         unverifyOpen, askUnverify, cancelUnverify, unverify, reasonError, clearReasonError,
         changedMsg, reloadAfterChanged,
     } = useAdminEmployers()
@@ -27,7 +28,7 @@ function AdminEmployers() {
     const hasFilter = search.trim() !== "" || tab !== "all" //từ khóa đã áp dụng (sau debounce), không phải chữ đang gõ
     const from = ready ? (pagination.currentPage - 1) * pagination.limit + 1 : 0
     const to = ready ? from + items.length - 1 : 0
-    const dialogOpen = unverifyOpen || changedMsg !== null
+    const dialogOpen = verifyOpen || unverifyOpen || changedMsg !== null
 
     return (
         <div className="mx-auto max-w-[1100px]">
@@ -170,7 +171,7 @@ function AdminEmployers() {
                     busy={busy}
                     locked={dialogOpen}
                     onClose={closePanel}
-                    onVerify={verify}
+                    onVerify={askVerify}
                     onUnverify={askUnverify}
                 />
             )}
@@ -183,6 +184,15 @@ function AdminEmployers() {
                 onClearError={clearReasonError}
                 onSubmit={unverify}
                 onCancel={cancelUnverify}
+            />
+            <ConfirmDialog
+                open={verifyOpen}
+                title="Xác minh công ty?"
+                message={`Xác nhận xác minh "${selected?.companyName ?? ""}" (MST ${selected?.taxCode ?? ""}). Công ty sẽ đăng được tin tuyển dụng.`}
+                yesLabel="Xác minh"
+                noLabel="Hủy"
+                onYes={verify}
+                onNo={cancelVerify}
             />
             <ProfileChangedDialog open={changedMsg !== null} message={changedMsg} onReload={reloadAfterChanged} />
         </div>
