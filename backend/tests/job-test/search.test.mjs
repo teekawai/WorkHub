@@ -145,12 +145,12 @@ export default async function run(ctx) {
     await expectSet("S-04", `category=${enc(c0.name)}&location=${enc(loc0)}&workType=Remote`, [E]);
     await expectSet("S-04", `category=&location=&workType=&experience=&sortBy=`, [A, B, C, D, E]); // rỗng = không lọc
   }
-  // S-05 lương: chỉ nhận 6 khoảng; giao nhau / chỉ Min tính biên dưới / Negotiable luôn hiện; khoảng cuối tính cả biên trên (1.3)
+  // S-05 lương: chỉ nhận 6 khoảng; giao nhau (chạm biên không tính) / chỉ Min tính biên dưới / Negotiable luôn hiện; khoảng cuối tính cả biên trên (1.3)
   {
-    await expectSet("S-05", `salaryMin=0&salaryMax=${10 * M}`, [C, E, D]);
+    await expectSet("S-05", `salaryMin=0&salaryMax=${10 * M}`, [D]); // C, E chỉ chạm biên 10tr -> không hiện
     await expectSet("S-05", `salaryMin=${10 * M}&salaryMax=${15 * M}`, [C, E, D]);
     await expectSet("S-05", `salaryMin=${20 * M}&salaryMax=${30 * M}`, [A, B, D]);
-    await expectSet("S-05", `salaryMin=${30 * M}&salaryMax=${50 * M}`, [A, D]);
+    await expectSet("S-05", `salaryMin=${30 * M}&salaryMax=${50 * M}`, [D]); // A 20–30 chỉ chạm biên 30tr
     await expectSet("S-05", `salaryMin=${50 * M}&salaryMax=${1000 * M}`, [D]);
     const top = await get(`/jobs?keyword=${encodeURIComponent(TAG2)}&salaryMin=${50 * M}&salaryMax=${1000 * M}`);
     ck("S-05", top.status === 200 && sameSet(ids(top), [F1ty.jobId, F50.jobId]), `"Trên 50 triệu" phải có Job từ 1 tỷ: [${names(top)}]`);
@@ -241,7 +241,7 @@ export default async function run(ctx) {
     await expectSet("S-11", "", [A, C, D, E]);
     const put = await J("PUT", `/jobs/${E.jobId}`, S1.token, { ...(await J("GET", `/employer/jobs/${E.jobId}`, S1.token)).data, salaryType: "Range", salaryMin: 40 * M, salaryMax: 45 * M, deadline: addDays(TODAY, 5) });
     ck("S-11", put.status === 200, errStr(put));
-    await expectSet("S-11", `salaryMin=${30 * M}&salaryMax=${50 * M}`, [A, D, E]);
+    await expectSet("S-11", `salaryMin=${30 * M}&salaryMax=${50 * M}`, [D, E]);
   }
   // S-12 rate limit 60 request/phút/IP (Business 6.1): bắn 70 request cùng lúc -> có 429 TOO_MANY_REQUESTS + Retry-After.
   // Cửa sổ cố định có thể chuyển giữa chừng nên số 200 chỉ chặn trên ở mức 2 cửa sổ

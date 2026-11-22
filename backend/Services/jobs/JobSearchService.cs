@@ -120,9 +120,10 @@ namespace backend.Services.jobs
                 decimal min = query.SalaryMin.Value, max = query.SalaryMax!.Value;
                 // khoảng cuối (tới mức trần) tính cả biên trên để Job "Từ 1 tỷ" vẫn hiện
                 var includeMax = max == SalaryCeiling;
-                // Negotiable luôn hiện; có Max -> giao nhau; chỉ Min -> min <= SalaryMin < max (Business 1.3)
+                // Negotiable luôn hiện; có Max -> giao nhau thực sự (chỉ chạm biên không tính), lương cố định X-X tính như mốc X;
+                // chỉ Min -> min <= SalaryMin < max (Business 1.3)
                 jobs = jobs.Where(j => j.Salary.SalaryType == SalaryType.Negotiable
-                    || (j.Salary.SalaryMax != null && j.Salary.SalaryMin <= max && j.Salary.SalaryMax >= min)
+                    || (j.Salary.SalaryMax != null && j.Salary.SalaryMin < max && (j.Salary.SalaryMax > min || j.Salary.SalaryMin == min))
                     || (j.Salary.SalaryMax == null && j.Salary.SalaryMin >= min && (j.Salary.SalaryMin < max || (includeMax && j.Salary.SalaryMin == max))));
             }
 

@@ -3,7 +3,7 @@ using System.Text.Json.Serialization;
 namespace backend.Common;
 //Gồm 2 thứ. ApiError là body lỗi chuẩn { code, message, errors }, errors bằng null thì không ghi  ra. ApiErrorCodes là danh sách hằng mã lỗi 
 // (VALIDATION_ERROR, JOB_NOT_FOUND, NOT_JOB_OWNER...) để  không phải gõ chuỗi tay.
-// Mã lỗi chuỗi trả về client (PLAN_Job_CodingRules.md - bảng mã lỗi)
+// Mã lỗi chuỗi trả về client (PLAN_CodingRules.md - bảng mã lỗi)
 public  class ApiErrorCodes
 {
     public const string ValidationError = "VALIDATION_ERROR";
