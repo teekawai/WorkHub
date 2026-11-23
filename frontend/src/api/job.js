@@ -15,9 +15,10 @@ export const searchJobs = async (params, signal) => {
     return res.data
 }
 
-//public: chi tiết 1 tin (404 trung tính cho mọi trường hợp không xem được)
+//public: chi tiết 1 tin (404 trung tính cho mọi trường hợp không xem được).
+//Dùng instance để gửi kèm token khi đã đăng nhập: Finder nhận thêm hasApplied; khách không có token vẫn gọi được
 export const getJobById = async (id) => {
-    const res = await publicClient.get(`/jobs/${encodeURIComponent(id)}`)
+    const res = await instance.get(`/jobs/${encodeURIComponent(id)}`)
     return res.data
 }
 

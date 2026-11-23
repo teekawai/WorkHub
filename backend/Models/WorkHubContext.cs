@@ -53,6 +53,21 @@ public partial class WorkHubContext : DbContext
             entity.Property(e => e.CoverLetter)
                 .HasColumnType("text")
                 .HasColumnName("coverLetter");
+            entity.Property(e => e.CvUrl)
+                .HasMaxLength(255)
+                .HasColumnName("cvUrl");
+            entity.Property(e => e.Email)
+                .HasMaxLength(255)
+                .HasColumnName("email");
+            entity.Property(e => e.FullName)
+                .HasMaxLength(100)
+                .HasColumnName("fullName");
+            entity.Property(e => e.RejectReason)
+                .HasMaxLength(500)
+                .HasColumnName("rejectReason");
+            entity.Property(e => e.StatusChangedAt)
+                .HasColumnType("datetime")
+                .HasColumnName("statusChangedAt");
             entity.Property(e => e.FinderId)
                 .HasMaxLength(36)
                 .HasColumnName("finderId");
@@ -85,6 +100,8 @@ public partial class WorkHubContext : DbContext
             // chặn 2 request lưu cùng mã số thuế lọt qua bước check trùng ở EmployerController
             entity.HasIndex(e => e.TaxCode, "taxCode").IsUnique();
 
+            entity.HasIndex(e => e.SlugCode, "slugCode").IsUnique();
+
             entity.Property(e => e.UserId)
                 .HasMaxLength(36)
                 .HasColumnName("userId");
@@ -112,6 +129,9 @@ public partial class WorkHubContext : DbContext
             entity.Property(e => e.Phone)
                 .HasMaxLength(15)
                 .HasColumnName("phone");
+            entity.Property(e => e.SlugCode)
+                .HasMaxLength(6)
+                .HasColumnName("slugCode");
             entity.Property(e => e.TaxCode)
                 .HasMaxLength(15)
                 .HasColumnName("taxCode");

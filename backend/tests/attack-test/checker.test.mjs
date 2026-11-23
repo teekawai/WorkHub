@@ -69,7 +69,7 @@ export default async function run() {
     const tax = sql(`SELECT taxCode FROM employerprofile WHERE userId='${E1.id}'`);
     const company = sql(`SELECT companyName FROM employerprofile WHERE userId='${E1.id}'`);
     const insProfile = (companyName, taxCode) =>
-      NO_FK + `INSERT INTO employerprofile (userId,companyName,address,field,phone,taxCode,isVerified) VALUES ('${ghost}','${companyName}','a','IT','0901234567','${taxCode}',0)`;
+      NO_FK + `INSERT INTO employerprofile (userId,companyName,slugCode,address,field,phone,taxCode,isVerified) VALUES ('${ghost}','${companyName}','${uid().replace(/[^a-z0-9]/g, '').slice(0, 6)}','a','IT','0901234567','${taxCode}',0)`;
     try {
       let err = "";
       try { sql(insProfile(`atk dup ${uid().slice(0, 8)}`, tax)); } catch (e) { err = errText(e); }

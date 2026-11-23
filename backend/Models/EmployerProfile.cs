@@ -30,6 +30,9 @@ public partial class Employerprofile
     // Lý do admin thu hồi xác minh (null khi chưa bị hủy)
     public string? UnverifyReason { get; set; }
 
+    // Mã 6 ký tự [a-z0-9] trong URL công ty, sinh khi tạo hồ sơ, không đổi (Business 6.1)
+    public string SlugCode { get; set; } = null!;
+
     public virtual ICollection<Job> Jobs { get; set; } = new List<Job>();
 
     public virtual User User { get; set; } = null!;

@@ -17,6 +17,19 @@ public partial class Application
 
     public string? CoverLetter { get; set; } //coverletter
 
+    // Snapshot thông tin nộp đơn (Business 1.1)
+    public string FullName { get; set; } = null!;
+
+    public string Email { get; set; } = null!;
+
+    public string CvUrl { get; set; } = null!;
+
+    // Lý do từ chối (khi Status = Rejected)
+    public string? RejectReason { get; set; }
+
+    // Thời điểm đổi trạng thái gần nhất, UTC
+    public DateTime? StatusChangedAt { get; set; }
+
 
     public virtual Finderprofile Finder { get; set; } = null!;
 

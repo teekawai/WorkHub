@@ -36,7 +36,7 @@ export default async function run(ctx) {
   {
     const jobRecs = recorded.filter((r) => /^\/(jobs|employer\/jobs)/.test(r.path));
     const walk = (v, f) => { if (Array.isArray(v)) v.forEach((x) => walk(x, f)); else if (v && typeof v === "object") { f(v); Object.values(v).forEach((x) => walk(x, f)); } };
-    const codes = new Set(["VALIDATION_ERROR", "UNAUTHENTICATED", "FORBIDDEN_ROLE", "EMPLOYER_PROFILE_NOT_FOUND", "EMPLOYER_NOT_VERIFIED", "NOT_JOB_OWNER", "JOB_NOT_FOUND", "EMPLOYER_NOT_FOUND", "JOB_ALREADY_CLOSED", "JOB_NOT_EDITABLE", "INTERNAL_ERROR", "FORBIDDEN", "NOT_FOUND", "CONFLICT", "SERVICE_UNAVAILABLE", "TOO_MANY_REQUESTS", "REQUEST_IN_PROGRESS", "IDEMPOTENCY_KEY_REUSED", "COMPANY_NAME_TAKEN", "TAX_CODE_TAKEN", "COMPANY_NAME_LOCKED", "TAX_CODE_LOCKED"]);
+    const codes = new Set(["VALIDATION_ERROR", "UNAUTHENTICATED", "FORBIDDEN_ROLE", "EMPLOYER_PROFILE_NOT_FOUND", "EMPLOYER_NOT_VERIFIED", "NOT_JOB_OWNER", "JOB_NOT_FOUND", "EMPLOYER_NOT_FOUND", "JOB_ALREADY_CLOSED", "JOB_NOT_EDITABLE", "JOB_HAS_APPLICATIONS", "INTERNAL_ERROR", "FORBIDDEN", "NOT_FOUND", "CONFLICT", "SERVICE_UNAVAILABLE", "TOO_MANY_REQUESTS", "REQUEST_IN_PROGRESS", "IDEMPOTENCY_KEY_REUSED", "COMPANY_NAME_TAKEN", "TAX_CODE_TAKEN", "COMPANY_NAME_LOCKED", "TAX_CODE_LOCKED"]);
     let nErr = 0, nAll = 0, n500 = [];
     for (const r of jobRecs.filter((x) => !x.probe)) {
       nAll++;

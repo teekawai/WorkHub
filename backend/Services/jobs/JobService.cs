@@ -90,15 +90,22 @@ namespace backend.Services.jobs
             var (job, fail) = await FindOwnedJobAsync<bool>(employerId, jobId);
             if (job == null) return fail!;
 
-            return await _repo.DeleteAsync(job) ? ServiceResult<bool>.Success(true) : JobNotFound<bool>();
+            return await _repo.DeleteAsync(job) switch
+            {
+                JobDeleteResult.Deleted => ServiceResult<bool>.Success(true),
+                JobDeleteResult.HasApplications => ServiceResult<bool>.Fail(ErrorCode.Conflict, "Tin tuyển dụng đã có đơn ứng tuyển nên không thể xóa. Bạn có thể đóng tin", ApiErrorCodes.JobHasApplications),
+                _ => JobNotFound<bool>()
+            };
         }
 
-        public async Task<ServiceResult<JobDetailResponseDTO>> GetPublicDetailAsync(string jobId)
+        public async Task<ServiceResult<JobDetailResponseDTO>> GetPublicDetailAsync(string jobId, string? finderId = null)
         {
             var job = await _repo.GetByIdAsync(jobId);
             // công ty chưa xác minh trả cùng 404, không lộ lý do (Business 5.1)
             if (job == null || !job.Employer.IsVerified) return JobNotFound<JobDetailResponseDTO>();
-            return ServiceResult<JobDetailResponseDTO>.Success(JobDetailResponseDTO.FromJobWithCompany(job));
+            var dto = JobDetailResponseDTO.FromJobWithCompany(job);
+            dto.HasApplied = finderId != null && await _repo.HasApplicationAsync(jobId, finderId);
+            return ServiceResult<JobDetailResponseDTO>.Success(dto);
         }
 
         public async Task<ServiceResult<PagedResult<JobResponseDTO>>> GetListForOwnerAsync(string employerId, int page, int limit)
@@ -108,14 +115,20 @@ namespace backend.Services.jobs
 
             limit = Paging.ClampLimit(limit);
             var (items, total) = await _repo.GetByEmployerAsync(employerId, page, limit);
+            // đếm đơn cả trang trong 1 query; Job không có đơn không có key -> 0 (không để null vì null làm mất field trong JSON)
+            var counts = await _repo.CountApplicationsByJobsAsync(items.Select(j => j.JobId));
+            var dtos = items.Select(j => { var dto = JobResponseDTO.FromJob(j); dto.ApplicationCount = counts.GetValueOrDefault(j.JobId); return dto; }).ToList();
             return ServiceResult<PagedResult<JobResponseDTO>>.Success(
-                new PagedResult<JobResponseDTO>(items.Select(JobResponseDTO.FromJob).ToList(), Paging.Build(total, page, limit)));
+                new PagedResult<JobResponseDTO>(dtos, Paging.Build(total, page, limit)));
         }
 
         public async Task<ServiceResult<JobDetailResponseDTO>> GetDetailForOwnerAsync(string employerId, string jobId)
         {
             var (job, fail) = await FindOwnedJobAsync<JobDetailResponseDTO>(employerId, jobId);
-            return job == null ? fail! : ServiceResult<JobDetailResponseDTO>.Success(JobDetailResponseDTO.FromJobWithCompany(job));
+            if (job == null) return fail!;
+            var dto = JobDetailResponseDTO.FromJobWithCompany(job);
+            dto.ApplicationCount = await _repo.CountApplicationsByJobAsync(jobId);
+            return ServiceResult<JobDetailResponseDTO>.Success(dto);
         }
 
         private static ServiceResult<T> JobNotFound<T>() =>

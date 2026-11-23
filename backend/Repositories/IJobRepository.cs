@@ -2,6 +2,8 @@ using backend.Models;
 
 namespace backend.Repositories
 {
+    public enum JobDeleteResult { Deleted, NotFound, HasApplications }
+
     // CRUD thuần trên bảng job, không chứa nghiệp vụ (validation, ownership nằm ở JobService)
     public interface IJobRepository
     {
@@ -23,11 +25,20 @@ namespace backend.Repositories
         // PATCH đóng: chỉ ghi Status, không đụng nội dung PUT vừa lưu
         Task<bool> CloseAsync(Job job);
 
-        // false = Job đã bị xóa bởi request khác. Job vừa bị đóng vẫn xóa được (reload rồi thử lại 1 lần)
-        Task<bool> DeleteAsync(Job job);
+        // Kiểm "có đơn" và xóa trong cùng transaction (Business 5). NotFound = Job đã bị xóa bởi request khác; HasApplications = Job có đơn (mọi trạng thái) -> không xóa gì. Job vừa bị đóng vẫn xóa được
+        Task<JobDeleteResult> DeleteAsync(Job job);
+
+        // số đơn của từng Job trong 1 query; Job không có đơn không có key (Service dùng GetValueOrDefault)
+        Task<Dictionary<string, int>> CountApplicationsByJobsAsync(IEnumerable<string> jobIds);
+
+        // số đơn (mọi trạng thái) của 1 Job
+        Task<int> CountApplicationsByJobAsync(string jobId);
 
         // đóng mọi Job Open có Deadline < today (auto-close — Business 2.3), trả số Job đã đóng (bỏ qua Job vừa bị request khác đóng)
         Task<int> CloseExpiredAsync(DateOnly today);
+
+        // Finder đã nộp đơn cho Job này chưa
+        Task<bool> HasApplicationAsync(string jobId, string finderId);
 
     }
 }

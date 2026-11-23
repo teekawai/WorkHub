@@ -18,8 +18,9 @@ namespace backend.Services.jobs
 
         Task<ServiceResult<bool>> DeleteByOwnerAsync(string employerId, string jobId);
 
-        // Finder/khách xem chi tiết: Job của Employer chưa xác minh trả 404 như Job không tồn tại (Business 5.1)
-        Task<ServiceResult<JobDetailResponseDTO>> GetPublicDetailAsync(string jobId);
+        // Finder/khách xem chi tiết: Job của Employer chưa xác minh trả 404 như Job không tồn tại (Business 5.1).
+        // finderId != null -> điền HasApplied (Finder đã nộp đơn cho Job này chưa)
+        Task<ServiceResult<JobDetailResponseDTO>> GetPublicDetailAsync(string jobId, string? finderId = null);
 
         // danh sách Job của chính Employer, phân trang (Business 5.2, 6.7)
         Task<ServiceResult<PagedResult<JobResponseDTO>>> GetListForOwnerAsync(string employerId, int page, int limit);

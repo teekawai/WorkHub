@@ -30,6 +30,10 @@ namespace backend.DTO.JobDTO
         public string CompanyName { get; set; } = null!;
         public string? Logo { get; set; }
 
+        // Số đơn (mọi trạng thái): chỉ 2 API của Employer (danh sách + chi tiết) gán; còn lại null -> không có field trong JSON
+        [System.Text.Json.Serialization.JsonIgnore(Condition = System.Text.Json.Serialization.JsonIgnoreCondition.WhenWritingNull)]
+        public int? ApplicationCount { get; set; }
+
         // job phải đã Include Employer
         public static JobResponseDTO FromJob(Models.Job job)
         {

@@ -13,6 +13,7 @@ public  class ApiErrorCodes
     public const string EmployerNotVerified = "EMPLOYER_NOT_VERIFIED";
     public const string NotJobOwner = "NOT_JOB_OWNER";
     public const string JobNotFound = "JOB_NOT_FOUND";
+    public const string JobHasApplications = "JOB_HAS_APPLICATIONS";
     public const string EmployerNotFound = "EMPLOYER_NOT_FOUND";
     public const string EmployerProfileChanged = "EMPLOYER_PROFILE_CHANGED";
     public const string JobAlreadyClosed = "JOB_ALREADY_CLOSED";

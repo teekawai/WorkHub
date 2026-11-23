@@ -2,7 +2,7 @@
 // Chạy riêng: node backend/tests/job-test/concurrency.test.mjs   (chạy tất cả: node backend/tests/job-test/run.mjs)
 import fs from "node:fs";
 import {
-  BE_LOG, J, ROUNDS, TS, addApp, appCount, ck, delayed, errStr, isErr, isMain, jobExists, jobStatusDb, mkJob, note, runSuites, sleep, sqlRow, tally, validJob,
+  BE_LOG, J, ROUNDS, TS, appCount, appInsertSql, holdTx, sqlAsync, ck, delayed, errStr, isErr, isMain, jobExists, jobStatusDb, mkJob, note, runSuites, sleep, sqlRow, tally, validJob,
 } from "./lib.mjs";
 
 export const name = "CC: Request đồng thời (MySQL thật)";
@@ -50,12 +50,11 @@ export default async function run(ctx) {
     }
     note("CC-02", `${n} PATCH: ${JSON.stringify(dist)}`);
   }
-  // CC-03 / CC-07: PUT || DELETE (Job có Application)
+  // CC-03 / CC-07: PUT || DELETE (Job không có đơn; Job có đơn -> 409 nên xem G-06/CC-13)
   {
     const dist = {};
     for (let i = 0; i < ROUNDS; i++) {
       const job = await mkJob(E1, { jobTitle: `CC03 ${i} ${TS}` });
-      addApp(F1, job.jobId);
       const [dp, dd] = stagger(i);
       const [p, d] = await Promise.all([
         delayed(dp, () => J("PUT", `/jobs/${job.jobId}`, E1.token, validJob({ jobTitle: `CC03 sửa ${i} ${TS}` }))),
@@ -64,16 +63,15 @@ export default async function run(ctx) {
       chk500("CC-03", p, d);
       tally(dist, `PUT ${p.status} / DELETE ${d.status}`);
       ck("CC-03", d.status === 200 && (p.status === 200 || isErr(p, 404, "JOB_NOT_FOUND")) && !jobExists(job.jobId), `vòng ${i}: PUT ${errStr(p)} | DELETE ${errStr(d)}`);
-      ck("CC-07", appCount(job.jobId) === 0, `vòng ${i}: Application mồ côi sau PUT||DELETE`);
+      ck("CC-07", appCount(job.jobId) === 0, `vòng ${i}: Application xuất hiện sau PUT||DELETE`);
     }
     note("CC-03", `phân bố: ${JSON.stringify(dist)}`);
   }
-  // CC-04: PATCH || DELETE
+  // CC-04: PATCH || DELETE (Job không có đơn)
   {
     const dist = {};
     for (let i = 0; i < ROUNDS; i++) {
       const job = await mkJob(E1, { jobTitle: `CC04 ${i} ${TS}` });
-      addApp(F1, job.jobId);
       const [dq, dd] = stagger(i);
       const [q, d] = await Promise.all([
         delayed(dq, () => J("PATCH", `/jobs/${job.jobId}/status`, E1.token, { status: "Closed" })),
@@ -82,31 +80,71 @@ export default async function run(ctx) {
       chk500("CC-04", q, d);
       tally(dist, `PATCH ${q.status} / DELETE ${d.status}`);
       ck("CC-04", d.status === 200 && (q.status === 200 || isErr(q, 404, "JOB_NOT_FOUND")) && !jobExists(job.jobId), `vòng ${i}: PATCH ${errStr(q)} | DELETE ${errStr(d)}`);
-      ck("CC-07", appCount(job.jobId) === 0, `vòng ${i}: Application mồ côi sau PATCH||DELETE`);
+      ck("CC-07", appCount(job.jobId) === 0, `vòng ${i}: Application xuất hiện sau PATCH||DELETE`);
     }
     note("CC-04", `phân bố: ${JSON.stringify(dist)}`);
   }
-  // CC-05: 2 DELETE
+  // CC-05: 2 DELETE (Job không có đơn)
   {
     const dist = {};
     for (let i = 0; i < ROUNDS; i++) {
       const job = await mkJob(E1, { jobTitle: `CC05 ${i} ${TS}` });
-      addApp(F1, job.jobId);
       const res = await Promise.all([0, 1].map(() => delayed(Math.random() * 4, () => J("DELETE", `/jobs/${job.jobId}`, E1.token))));
       chk500("CC-05", ...res);
       tally(dist, res.map((x) => x.status).sort().join("/"));
       ck("CC-05", res.filter((x) => x.status === 200).length === 1 && res.filter((x) => isErr(x, 404, "JOB_NOT_FOUND")).length === 1 && !jobExists(job.jobId), `vòng ${i}: ${res.map(errStr).join(" | ")}`);
-      ck("CC-07", appCount(job.jobId) === 0, `vòng ${i}: Application mồ côi sau 2 DELETE`);
+      ck("CC-07", appCount(job.jobId) === 0, `vòng ${i}: Application xuất hiện sau 2 DELETE`);
     }
     note("CC-05", `phân bố: ${JSON.stringify(dist)}`);
   }
-  // CC-06: DELETE ngay sau khi đóng
+  // CC-06: DELETE ngay sau khi đóng (Job không có đơn)
   for (let i = 0; i < 5; i++) {
     const job = await mkJob(E1, { jobTitle: `CC06 ${i} ${TS}` });
-    addApp(F1, job.jobId);
     const q = await J("PATCH", `/jobs/${job.jobId}/status`, E1.token, { status: "Closed" });
     const d = await J("DELETE", `/jobs/${job.jobId}`, E1.token);
     ck("CC-06", q.status === 200 && d.status === 200 && !jobExists(job.jobId) && appCount(job.jobId) === 0, `${errStr(q)} | ${errStr(d)}`);
+  }
+  // CC-09: DELETE || INSERT đơn (SQL, phiên riêng) ở thời điểm ngẫu nhiên -> luôn nhất quán:
+  // INSERT thành công <=> DELETE 409 (Job + đúng 1 đơn còn); INSERT lỗi FK <=> DELETE 200 (Job và đơn đều mất). Không có đơn mồ côi, không 5xx
+  {
+    const dist = {};
+    for (let i = 0; i < ROUNDS; i++) {
+      const job = await mkJob(E1, { jobTitle: `CC09 ${i} ${TS}` });
+      const [d, ins] = await Promise.all([
+        delayed(Math.random() * 60, () => J("DELETE", `/jobs/${job.jobId}`, E1.token)),
+        sqlAsync(appInsertSql(F1, job.jobId)).then(() => "ok", (e) => (/1452/.test(e.message) ? "fk" : "lỗi: " + e.message.slice(0, 100))),
+      ]);
+      chk500("CC-09", d);
+      tally(dist, `DELETE ${d.status} / INSERT ${ins}`);
+      const ok = (ins === "ok" && isErr(d, 409, "JOB_HAS_APPLICATIONS") && jobExists(job.jobId) && appCount(job.jobId) === 1)
+        || (ins === "fk" && d.status === 200 && !jobExists(job.jobId) && appCount(job.jobId) === 0);
+      ck("CC-09", ok, `vòng ${i}: DELETE ${errStr(d)} | INSERT ${ins} | job=${jobExists(job.jobId)} apps=${appCount(job.jobId)}`);
+    }
+    note("CC-09", `phân bố: ${JSON.stringify(dist)}`);
+  }
+  // CC-13 / CC-14: race tất định. Phiên SQL INSERT đơn nhưng CHƯA commit -> DELETE phải chờ (FOR UPDATE chờ khóa S của kiểm FK)
+  // commit -> DELETE thấy đơn -> 409, Job + đơn còn; rollback -> DELETE 200, Job mất
+  for (const [id, commit] of [["CC-13", true], ["CC-14", false]]) {
+    const job = await mkJob(E1, { jobTitle: `${id} ${TS}` });
+    const tx = await holdTx(appInsertSql(F1, job.jobId));
+    try {
+      let done = false;
+      const del = J("DELETE", `/jobs/${job.jobId}`, E1.token).then((r) => { done = true; return r; });
+      await sleep(1500);
+      ck(id, !done, "DELETE đã trả lời trong lúc đơn chưa commit (không chờ khóa)");
+      await (commit ? tx.commit() : tx.rollback());
+      const d = await del;
+      chk500(id, d);
+      if (commit) ck(id, isErr(d, 409, "JOB_HAS_APPLICATIONS") && jobExists(job.jobId) && appCount(job.jobId) === 1, `commit: ${errStr(d)} job=${jobExists(job.jobId)} apps=${appCount(job.jobId)}`);
+      else ck(id, d.status === 200 && !jobExists(job.jobId) && appCount(job.jobId) === 0, `rollback: ${errStr(d)} job=${jobExists(job.jobId)} apps=${appCount(job.jobId)}`);
+    } finally { tx.kill(); }
+  }
+  // CC-15: sau khi Job bị xóa, INSERT đơn cho Job đó phải lỗi FK 1452 (không có đơn mồ côi)
+  {
+    const job = await mkJob(E1, { jobTitle: `CC15 ${TS}` });
+    const d = await J("DELETE", `/jobs/${job.jobId}`, E1.token);
+    const ins = await sqlAsync(appInsertSql(F1, job.jobId)).then(() => "ok", (e) => e.message);
+    ck("CC-15", d.status === 200 && /1452/.test(ins) && appCount(job.jobId) === 0, `${errStr(d)} | INSERT: ${ins.slice(0, 120)}`);
   }
   // Cột nội dung của Job (không gồm jobId/employerId/status/createdAt); salary ép về số nguyên để so với body
   const CONTENT_SQL = (id) => sqlRow(`SELECT jobTitle,category,IFNULL(subCategory,'NULL'),location,workType,IFNULL(skillRequired,'NULL'),description,requirement,applicantBenefit,salaryType,IFNULL(CAST(salaryMin AS SIGNED),'NULL'),IFNULL(CAST(salaryMax AS SIGNED),'NULL'),yearOfExperience,numberOfPosition,deadline FROM job WHERE jobId='${id}'`).join("|");

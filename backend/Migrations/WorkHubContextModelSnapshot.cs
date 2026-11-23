@@ -39,11 +39,29 @@ namespace backend.Migrations
                         .HasColumnType("text")
                         .HasColumnName("coverLetter");
 
+                    b.Property<string>("CvUrl")
+                        .IsRequired()
+                        .HasMaxLength(255)
+                        .HasColumnType("varchar(255)")
+                        .HasColumnName("cvUrl");
+
+                    b.Property<string>("Email")
+                        .IsRequired()
+                        .HasMaxLength(255)
+                        .HasColumnType("varchar(255)")
+                        .HasColumnName("email");
+
                     b.Property<string>("FinderId")
                         .IsRequired()
                         .HasMaxLength(36)
                         .HasColumnType("varchar(36)")
                         .HasColumnName("finderId");
+
+                    b.Property<string>("FullName")
+                        .IsRequired()
+                        .HasMaxLength(100)
+                        .HasColumnType("varchar(100)")
+                        .HasColumnName("fullName");
 
                     b.Property<string>("JobId")
                         .IsRequired()
@@ -51,11 +69,20 @@ namespace backend.Migrations
                         .HasColumnType("varchar(36)")
                         .HasColumnName("jobId");
 
+                    b.Property<string>("RejectReason")
+                        .HasMaxLength(500)
+                        .HasColumnType("varchar(500)")
+                        .HasColumnName("rejectReason");
+
                     b.Property<string>("Status")
                         .IsRequired()
                         .HasMaxLength(20)
                         .HasColumnType("varchar(20)")
                         .HasColumnName("status");
+
+                    b.Property<DateTime?>("StatusChangedAt")
+                        .HasColumnType("datetime")
+                        .HasColumnName("statusChangedAt");
 
                     b.HasKey("ApplicationId")
                         .HasName("PRIMARY");
@@ -116,6 +143,12 @@ namespace backend.Migrations
                         .HasColumnType("varchar(15)")
                         .HasColumnName("phone");
 
+                    b.Property<string>("SlugCode")
+                        .IsRequired()
+                        .HasMaxLength(6)
+                        .HasColumnType("varchar(6)")
+                        .HasColumnName("slugCode");
+
                     b.Property<string>("TaxCode")
                         .IsRequired()
                         .HasMaxLength(15)
@@ -136,6 +169,9 @@ namespace backend.Migrations
                         .HasName("PRIMARY");
 
                     b.HasIndex(new[] { "CompanyName" }, "companyName")
+                        .IsUnique();
+
+                    b.HasIndex(new[] { "SlugCode" }, "slugCode")
                         .IsUnique();
 
                     b.HasIndex(new[] { "TaxCode" }, "taxCode")

@@ -109,6 +109,8 @@ namespace backend.Controllers
                 {
                     UserId = currentUserId,
                     CompanyName = dto.CompanyName,
+                    // shortcut: mã trùng (~1/2 tỷ) rơi vào nhánh CompanyNameTaken bên dưới, không retry
+                    SlugCode = Slug.NewCode(),
                     Address = dto.Address,
                     Description = dto.Description,
                     Website = dto.Website,

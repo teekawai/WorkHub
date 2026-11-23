@@ -47,11 +47,11 @@ namespace backend.Controllers
         [AllowAnonymous]
         public IActionResult Options() => Ok(JobOptionsDTO.FromConstants());
 
-        // khách/Finder xem chi tiết Job
+        // khách/Finder xem chi tiết Job; Finder đăng nhập (token hợp lệ) thì có thêm hasApplied
         [HttpGet("{id}")]
         [AllowAnonymous]
         public async Task<IActionResult> GetDetail(string id) =>
-            (await _jobService.GetPublicDetailAsync(id)).ToActionResult();
+            (await _jobService.GetPublicDetailAsync(id, User.IsInRole("finder") ? User.FindFirst(ClaimTypes.NameIdentifier)?.Value : null)).ToActionResult();
 
         [HttpPut("{id}")]
         [Authorize(Policy = "VerifiedEmployer")]
