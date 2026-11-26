@@ -1,7 +1,7 @@
-// I: GET /api/employer/jobs/:id — Chi tiết Job của chính Employer, không lọc Status/Deadline/IsVerified (Business 5.3)
+// I: GET /api/employer/jobs/:id — Chi tiết Job của chính Employer, không lọc Status/Deadline/IsVerified (Business 5.3; applicationCount: Application Business 5)
 // Chạy riêng: node backend/tests/job-test/employer-detail.test.mjs   (chạy tất cả: node backend/tests/job-test/run.mjs)
 import {
-  DETAIL_KEYS, J, TODAY, addDays, ck, errStr, isErr, isMain, mkJob, profileOf, raw, runSuites, sameSet, setDeadline,
+  EMPLOYER_DETAIL_KEYS, J, TODAY, addApp, addDays, ck, errStr, isErr, isMain, mkJob, profileOf, raw, runSuites, sameSet, setDeadline,
 } from "./lib.mjs";
 
 export const name = "I: GET /api/employer/jobs/:id";
@@ -15,8 +15,15 @@ export default async function run(ctx) {
     const j = await mkJob(E1, { jobTitle: "I job" });
     const a = await J("GET", `/employer/jobs/${j.jobId}`, E1.token);
     const b = await raw("GET", `/jobs/${j.jobId}`);
-    ck("I-01", a.status === 200 && sameSet(Object.keys(a.data), DETAIL_KEYS) && JSON.stringify(a.data) === JSON.stringify(b.data), `${errStr(a).slice(0, 200)}`);
+    const { hasApplied, ...pub } = b.data; // chỉ chi tiết công khai có hasApplied (Application Business 2.5)
+    const { applicationCount, updatedAt, ...emp } = a.data || {}; // chỉ chi tiết Employer có applicationCount (Application Business 5) và updatedAt (Business 5.1)
+    ck("I-01", a.status === 200 && sameSet(Object.keys(a.data), EMPLOYER_DETAIL_KEYS) && JSON.stringify(emp) === JSON.stringify(pub), `${errStr(a).slice(0, 200)}`);
     ck("I-03", !/employerId|phone|taxCode|userId/i.test(Object.keys(a.data).join(",")), "lộ field");
+    // I-06: applicationCount = 0 khi chưa có đơn (key vẫn có), = số đơn (mọi trạng thái) khi có
+    ck("I-06", applicationCount === 0, `Job chưa có đơn: ${applicationCount}`);
+    addApp(F1, j.jobId); addApp(F2, j.jobId, "Rejected");
+    const a6 = await J("GET", `/employer/jobs/${j.jobId}`, E1.token);
+    ck("I-06", a6.status === 200 && a6.data.applicationCount === 2 && sameSet(Object.keys(a6.data), EMPLOYER_DETAIL_KEYS), errStr(a6).slice(0, 200));
     const c = await mkJob(E1, { jobTitle: "I closed" });
     await J("PATCH", `/jobs/${c.jobId}/status`, E1.token, { status: "Closed" });
     const e = await mkJob(E1, { jobTitle: "I expired" });

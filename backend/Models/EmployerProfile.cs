@@ -25,10 +25,13 @@ public partial class Employerprofile
 
     
     public string TaxCode { get; set; } = null!;
-    public bool IsVerified {get; set;}= false;
+    public bool IsVerified {get; set;}= false; //xác minh doanh nghiệp
 
     // Lý do admin thu hồi xác minh (null khi chưa bị hủy)
     public string? UnverifyReason { get; set; }
+
+    // Mã 6 ký tựtrong URL công ty, tránh trường hợp dường dẫn của 2 công ty có tên giống nhau chỉ khác dấu bị trình nhau
+    public string SlugCode { get; set; } = null!;
 
     public virtual ICollection<Job> Jobs { get; set; } = new List<Job>();
 

@@ -4,6 +4,7 @@ using backend.Services.idempotency;
 using backend.Middlewares;
 using backend.Models;
 using backend.Repositories;
+using backend.Services.applications;
 using backend.Services.auth;
 using backend.Services.files;
 using backend.Services.admin;
@@ -24,7 +25,7 @@ using StackExchange.Redis;
 
 var builder = WebApplication.CreateBuilder(args);
 
-// Log ra console + file theo ngày (backend/logs/workhub-<yyyyMMdd>.log, giữ 30 file). Câu SQL của EF (Information) vẫn được ghi.
+// Log ra console + file theo ngày (backend/logs/workhub-<yyyyMMdd>.log, giữ 30 file). Câu SQL của EF (Information) vẫn được ghi. Để ghi dữ liệu 
 builder.Host.UseSerilog((_, cfg) => cfg
     .MinimumLevel.Information()
     .MinimumLevel.Override("Microsoft.AspNetCore", LogEventLevel.Warning)
@@ -59,6 +60,8 @@ builder.Services.AddOpenApi();
 var connectionString = builder.Configuration.GetConnectionString("DefaultConnection");
 builder.Services.AddDbContext<WorkHubContext>(option => option.UseMySql(connectionString, ServerVersion.AutoDetect(connectionString)));
 
+
+//thêm service jwt để xác thực, xác minh tài khoản, stateless
 builder.Services.AddAuthentication(option =>
 {
     option.DefaultAuthenticateScheme = JwtBearerDefaults.AuthenticationScheme;
@@ -75,7 +78,7 @@ builder.Services.AddAuthentication(option =>
         ValidAudience = builder.Configuration["JWT:Audience"],
         IssuerSigningKey = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(builder.Configuration["JWT:Key"] ?? throw new Exception("thiếu jwt key")))
     };
-    // refresh token ký cùng key/issuer/audience -> phải chặn bằng claim token_type, chỉ access token mới được dùng làm Bearer
+    // refresh token ký cùng key/issuer/audience chỉ access token mới được dùng làm Bearer
     options.Events = new JwtBearerEvents
     {
         OnTokenValidated = context =>
@@ -86,7 +89,7 @@ builder.Services.AddAuthentication(option =>
             }
             return Task.CompletedTask;
         },
-        // thiếu/sai/hết hạn token -> 401 body chuẩn { code, message }
+        // thiếu/sai/hết hạn token
         OnChallenge = async context =>
         {
             context.HandleResponse();
@@ -97,6 +100,7 @@ builder.Services.AddAuthentication(option =>
     };
 });
 
+//Thêm policy để xác minh ứng viên
 builder.Services.AddAuthorization(options =>
 {
     options.AddPolicy("VerifiedEmployer", policy =>
@@ -117,6 +121,7 @@ builder.Services.AddCors(option =>
     });
 });
 
+//cấu hình cloudinary
 var cloudName = builder.Configuration["Cloudinary:cloud_name"];
 var apiKey = builder.Configuration["Cloudinary:api_key"];
 var apiSecret = builder.Configuration["Cloudinary:api_secret"];
@@ -142,6 +147,8 @@ builder.Services.AddScoped<IJwtTokenService, JwtService>();
 builder.Services.AddScoped<INewRegisterService, RegisterService>();
 builder.Services.AddScoped<ITokenValidate, RefreshTokenValidate>();
 builder.Services.AddScoped<IFileUploadService, FileUploadService>();
+builder.Services.AddScoped<IApplicationRepository, ApplicationRepository>();
+builder.Services.AddScoped<IApplicationService, ApplicationService>();
 builder.Services.AddScoped<IGoogleAuthService, GoogleAuthService>();
 builder.Services.AddScoped<IAuthorizationHandler, VerifiedEmployerHandler>();
 builder.Services.AddSingleton<IAuthorizationMiddlewareResultHandler, ApiAuthorizationResultHandler>();
@@ -166,7 +173,7 @@ builder.Services.AddRateLimiter(options =>
             new ApiError(ApiErrorCodes.TooManyRequests, "Bạn thao tác quá nhanh, vui lòng thử lại sau"));
     };
 
-    // Rate limit cho Auth (login/register): bảo vệ brute force nhưng đủ thoáng cho test tự động (100 req / phút theo IP)
+    // Rate limit cho Auth (login/register): bảo vệ brute force 
     options.AddPolicy("auth", httpContext =>
     {
         var clientIp = httpContext.Connection.RemoteIpAddress?.ToString() ?? "unknown";
@@ -179,7 +186,7 @@ builder.Services.AddRateLimiter(options =>
         });
     });
 
-    // Rate limit cho upload CV & Avatar: 30 request / phút theo User ID hoặc IP
+    // Rate limit cho upload CV & Avatar: 30 request / phút theo User ID hoặc client ID
     options.AddPolicy("upload_cv_avt", httpContext =>
     {
         var partitionKey = httpContext.User.FindFirst(System.Security.Claims.ClaimTypes.NameIdentifier)?.Value
@@ -195,7 +202,22 @@ builder.Services.AddRateLimiter(options =>
         });
     });
 
-    // Rate limit cho tìm kiếm Job công khai: 60 request / phút theo IP (Business 6.1)
+    // Rate limit nộp đơn ứng tuyển: 5 request / phút theo User ID (fallback IP), Business 2.1
+    options.AddPolicy("apply", httpContext =>
+    {
+        var partitionKey = httpContext.User.FindFirst(System.Security.Claims.ClaimTypes.NameIdentifier)?.Value
+                           ?? httpContext.Connection.RemoteIpAddress?.ToString()
+                           ?? "unknown";
+        return RateLimitPartition.GetFixedWindowLimiter(partitionKey, _ => new FixedWindowRateLimiterOptions
+        {
+            PermitLimit = 5,
+            Window = TimeSpan.FromMinutes(1),
+            QueueProcessingOrder = QueueProcessingOrder.OldestFirst,
+            QueueLimit = 0
+        });
+    });
+
+    // Rate limit cho tìm kiếm Job công khai: 60 request / phút theo IP (tránh ddos)
     options.AddPolicy("job_search", httpContext =>
     {
         var clientIp = httpContext.Connection.RemoteIpAddress?.ToString() ?? "unknown";
@@ -239,7 +261,7 @@ else
 }
 
 // thứ tự quan trọng:
-// - CORS trước rate limiter -> response 429 vẫn có header CORS, trình duyệt không báo nhầm thành lỗi CORS
+// - CORS trước rate limiter để response 429 vẫn có header CORS, trình duyệt không báo nhầm thành lỗi CORS
 // - Authentication trước rate limiter -> policy "upload_cv_avt" đọc được UserId để chia giới hạn theo user thay vì theo IP
 app.UseCors("CORS");
 

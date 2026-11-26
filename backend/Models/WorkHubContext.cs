@@ -16,7 +16,6 @@ public partial class WorkHubContext : DbContext
     {
     }
 
-    public virtual DbSet<RefreshToken> RefreshTokens { get; set; }
 
     public virtual DbSet<Application> Applications { get; set; }
 
@@ -53,6 +52,21 @@ public partial class WorkHubContext : DbContext
             entity.Property(e => e.CoverLetter)
                 .HasColumnType("text")
                 .HasColumnName("coverLetter");
+            entity.Property(e => e.CvUrl)
+                .HasMaxLength(255)
+                .HasColumnName("cvUrl");
+            entity.Property(e => e.Email)
+                .HasMaxLength(255)
+                .HasColumnName("email");
+            entity.Property(e => e.FullName)
+                .HasMaxLength(100)
+                .HasColumnName("fullName");
+            entity.Property(e => e.RejectReason)
+                .HasMaxLength(500)
+                .HasColumnName("rejectReason");
+            entity.Property(e => e.StatusChangedAt)
+                .HasColumnType("datetime")
+                .HasColumnName("statusChangedAt");
             entity.Property(e => e.FinderId)
                 .HasMaxLength(36)
                 .HasColumnName("finderId");
@@ -85,6 +99,8 @@ public partial class WorkHubContext : DbContext
             // chặn 2 request lưu cùng mã số thuế lọt qua bước check trùng ở EmployerController
             entity.HasIndex(e => e.TaxCode, "taxCode").IsUnique();
 
+            entity.HasIndex(e => e.SlugCode, "slugCode").IsUnique();
+
             entity.Property(e => e.UserId)
                 .HasMaxLength(36)
                 .HasColumnName("userId");
@@ -112,6 +128,9 @@ public partial class WorkHubContext : DbContext
             entity.Property(e => e.Phone)
                 .HasMaxLength(15)
                 .HasColumnName("phone");
+            entity.Property(e => e.SlugCode)
+                .HasMaxLength(6)
+                .HasColumnName("slugCode");
             entity.Property(e => e.TaxCode)
                 .HasMaxLength(15)
                 .HasColumnName("taxCode");
@@ -196,6 +215,9 @@ public partial class WorkHubContext : DbContext
             entity.Property(e => e.CreatedAt)
                 .HasColumnType("datetime")
                 .HasColumnName("createdAt");
+            entity.Property(e => e.UpdatedAt)
+                .HasColumnType("datetime")
+                .HasColumnName("updatedAt");
             entity.Property(e => e.Deadline)
                 .HasColumnType("date")
                 .HasColumnName("deadline");
@@ -282,27 +304,6 @@ public partial class WorkHubContext : DbContext
             .HasColumnName("email");
         });
 
-        modelBuilder.Entity<RefreshToken>(entity =>
-        {
-            entity.HasKey(e => e.UserId).HasName("PRIMARY");
-            entity.ToTable("refreshToken");
-            entity.Property(e => e.Token)
-            .HasColumnType("text")
-            .HasColumnName("token");
-            entity.Property(e => e.UserId)
-            .HasMaxLength(36)
-            .HasColumnName("userId");
-            entity.Property(e => e.ExpireAt)
-            .HasColumnType("datetime")
-            .HasColumnName("expireAt");
-            entity.Property(e => e.IsRevoked)
-            .HasColumnName("isRevoked");
-
-            entity.HasOne(d => d.User).WithMany()
-             .HasForeignKey(d => d.UserId)
-        .OnDelete(DeleteBehavior.Cascade)
-        .HasConstraintName("fk_refreshtoken_user");
-        });
 
         OnModelCreatingPartial(modelBuilder);
     }

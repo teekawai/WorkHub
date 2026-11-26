@@ -1,7 +1,7 @@
-// H: GET /api/employer/jobs — Danh sách Job của Employer + phân trang (Business 5.2, 6.7)
+// H: GET /api/employer/jobs — Danh sách Job của Employer + phân trang (Business 5.2, 6.7; applicationCount: Application Business 5)
 // Chạy riêng: node backend/tests/job-test/employer-list.test.mjs   (chạy tất cả: node backend/tests/job-test/run.mjs)
 import {
-  J, RESP_KEYS, TODAY, addDays, ck, errStr, isErr, isMain, makeEmployer, mkJob, note, runSuites, sameSet, setDeadline, sortedKeys, sql, sqlCol,
+  EMPLOYER_LIST_KEYS, J, RESP_KEYS, TODAY, addApp, addDays, ck, errStr, isErr, isMain, makeEmployer, mkJob, note, runSuites, sameSet, setDeadline, sortedKeys, sql, sqlCol,
 } from "./lib.mjs";
 
 export const name = "H: GET /api/employer/jobs";
@@ -23,12 +23,26 @@ export default async function run(ctx) {
     const r = await J("GET", "/employer/jobs", E6.token);
     ck("H1-01", r.status === 200 && sameSet(r.data.items.map((x) => x.jobId), [o.jobId, c.jobId, e.jobId]), errStr(r));
     ck("H1-01", r.data.items.find((x) => x.jobId === e.jobId)?.status === "Open", "expired phải vẫn Open");
-    ck("H1-02", r.data.items.every((x) => sameSet(Object.keys(x), RESP_KEYS)), `item keys=${sortedKeys(r.data.items[0] || {})}`);
+    ck("H1-02", r.data.items.every((x) => sameSet(Object.keys(x), EMPLOYER_LIST_KEYS)), `item keys=${sortedKeys(r.data.items[0] || {})}`);
     ck("H1-03", sameSet(Object.keys(r.data), ["items", "pagination"]) && sameSet(Object.keys(r.data.pagination), ["totalItems", "totalPages", "currentPage", "limit"]) && r.data.pagination.currentPage === 1 && r.data.pagination.limit === 30, JSON.stringify(r.data.pagination));
     // list item ~ detail
     const dd = await J("GET", `/employer/jobs/${o.jobId}`, E6.token);
     const it = r.data.items.find((x) => x.jobId === o.jobId);
     ck("H1-02", dd.status === 200 && RESP_KEYS.every((k) => JSON.stringify(dd.data[k]) === JSON.stringify(it[k])), "list item lệch detail");
+
+    // H5: applicationCount (Application Business 5) — Job 0 đơn phải ra 0 (key vẫn có), đếm mọi trạng thái đơn và mọi trạng thái Job
+    ck("H5-01", r.data.items.every((x) => Number.isInteger(x.applicationCount) && x.applicationCount === 0), `trước khi có đơn: ${r.data.items.map((x) => x.applicationCount)}`);
+    addApp(F1, c.jobId, "Accepted"); addApp(F2, c.jobId, "Rejected"); // Job Closed: 2 đơn đã xử lý
+    addApp(F1, e.jobId); // Job hết hạn: 1 đơn Pending
+    const r5 = await J("GET", "/employer/jobs", E6.token);
+    const cnt = (id) => r5.data.items.find((x) => x.jobId === id)?.applicationCount;
+    ck("H5-01", r5.status === 200 && cnt(o.jobId) === 0, `Job 0 đơn cùng trang Job có đơn: ${cnt(o.jobId)}`);
+    ck("H5-02", cnt(c.jobId) === 2 && cnt(e.jobId) === 1, `Closed(Accepted+Rejected)=${cnt(c.jobId)}, expired(Pending)=${cnt(e.jobId)}`);
+    ck("H5-02", r5.data.items.every((x) => sameSet(Object.keys(x), EMPLOYER_LIST_KEYS)), "keys item sau khi có đơn");
+    for (const x of r5.data.items) {
+      const dx = await J("GET", `/employer/jobs/${x.jobId}`, E6.token);
+      ck("H5-04", dx.status === 200 && dx.data.applicationCount === x.applicationCount, `list=${x.applicationCount} detail=${dx.data?.applicationCount}`);
+    }
 
     // H3: E5 có 35 job
     for (let n = 0; n < 35; n++) await mkJob(E5, { jobTitle: `H3 job ${n}` });
@@ -50,6 +64,12 @@ export default async function run(ctx) {
     }
     const p6 = await J("GET", "/employer/jobs?limit=30&page=3", E5.token);
     ck("H3-06", p6.status === 200 && p6.data.items.length === 0 && p6.data.pagination.totalPages === 2 && p6.data.pagination.currentPage === 3, errStr(p6).slice(0, 200));
+    // H5-03: đếm đúng cho từng trang (Job có đơn ở trang 1 và trang 2), Job còn lại = 0
+    addApp(F1, expectOrder[0]); addApp(F2, expectOrder[0]); addApp(F1, expectOrder[34]);
+    const q1 = await J("GET", "/employer/jobs", E5.token), q2 = await J("GET", "/employer/jobs?page=2", E5.token);
+    const all = [...q1.data.items, ...q2.data.items];
+    ck("H5-03", all.length === 35 && all.every((x) => x.applicationCount === (x.jobId === expectOrder[0] ? 2 : x.jobId === expectOrder[34] ? 1 : 0)),
+      `trang1[0]=${q1.data.items[0]?.applicationCount}, trang2[4]=${q2.data.items[4]?.applicationCount}, tổng đơn=${all.reduce((n, x) => n + x.applicationCount, 0)}`);
     const p7 = await J("GET", "/employer/jobs", E7.token);
     ck("H3-07", p7.status === 200 && p7.data.items.length === 0 && p7.data.pagination.totalItems === 0 && p7.data.pagination.totalPages === 0, errStr(p7));
     const p9 = await J("GET", "/employer/jobs?page=999999", E5.token);

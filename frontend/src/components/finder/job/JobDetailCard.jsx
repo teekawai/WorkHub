@@ -57,11 +57,15 @@ export function JobDetailCard({ job, canApply }) {
                 <Info label="Số lượng tuyển" value={`${job.numberOfPosition} người`} />
                 <Info label="Hạn nộp" value={formatDeadline(job.deadline)} />
             </dl>
-            {canApply && (
+            {canApply && (job.hasApplied ? (
+                <button type="button" disabled className="w-full cursor-not-allowed rounded-lg bg-slate-100 px-4 py-2.5 text-sm font-medium text-slate-500">
+                    Đã ứng tuyển
+                </button>
+            ) : (
                 <button type="button" className="w-full rounded-lg bg-[#155DFC] px-4 py-2.5 text-sm font-medium text-white transition-colors hover:bg-[#0F4FE0]">
                     Ứng tuyển
                 </button>
-            )}
+            ))}
             <CompanyBlock job={job} />
         </aside>
     )

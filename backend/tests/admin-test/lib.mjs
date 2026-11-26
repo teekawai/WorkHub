@@ -114,7 +114,6 @@ export async function sharedAdmin(ctx) {
 /** Xóa mọi admin tạm (username hoặc email qa_admin_*, role admin) cùng refresh token. Không đụng admin thật. */
 export function cleanTempAdmins() {
   const w = `role='admin' AND (LEFT(username,9)='qa_admin_' OR LEFT(email,9)='qa_admin_')`;
-  sql(`DELETE FROM refreshToken WHERE userId IN (SELECT userId FROM (SELECT userId FROM users WHERE ${w}) t)`);
   sql(`DELETE FROM users WHERE ${w}`);
 }
 export const tempAdminCount = () => sqlInt(`SELECT COUNT(*) FROM users WHERE LEFT(username,9)='qa_admin_' OR LEFT(email,9)='qa_admin_'`);

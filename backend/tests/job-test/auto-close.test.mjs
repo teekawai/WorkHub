@@ -2,7 +2,7 @@
 // Chạy riêng: node backend/tests/job-test/auto-close.test.mjs   (chạy tất cả: node backend/tests/job-test/run.mjs)
 // Lưu ý: BE phụ khởi động sẽ đóng MỌI Job Open quá hạn trong DB local (kể cả dữ liệu không phải của test) — đúng hành vi thật lúc 00:00
 import {
-  J, TODAY, addDays, ck, errStr, isMain, jobStatusDb, makeEmployer, mkJob, note, raw, runSuites, setDeadline, setVerified, sleep, withExtraBackend,
+  J, TODAY, addDays, ck, errStr, isMain, jobStatusDb, makeEmployer, mkJob, note, raw, runSuites, setDeadline, setVerified, sleep, sql, withExtraBackend,
 } from "./lib.mjs";
 
 export const name = "AC: JobAutoCloseService (BE phụ cổng 5166)";
@@ -30,6 +30,8 @@ export default async function run() {
   const watched = { yesterday, longAgo, today, future, closedBefore, unverified };
   const statusAll = () => Object.fromEntries(Object.entries(watched).map(([k, j]) => [k, jobStatusDb(j.jobId)]));
   const before = statusAll();
+  const updAll = () => Object.fromEntries(Object.entries(watched).map(([k, j]) => [k, sql(`SELECT updatedAt FROM job WHERE jobId='${j.jobId}'`)]));
+  const updBefore = updAll();
   ck("AC-00", before.yesterday === "Open" && before.longAgo === "Open" && before.unverified === "Open" && before.closedBefore === "Closed",
     `trước khi chạy bù: ${JSON.stringify(before)}`);
 
@@ -41,6 +43,10 @@ export default async function run() {
     ck("AC-02", after.today === "Open" && after.future === "Open", `Job còn hạn bị đóng nhầm: ${JSON.stringify(after)}`);
     ck("AC-03", after.closedBefore === "Closed", `Job đã đóng bị đổi: ${after.closedBefore}`);
     ck("AC-04", after.unverified === "Closed", `Job của Employer chưa xác minh: ${after.unverified}`);
+    // UA-09: auto-close chỉ ghi Status, không đổi updatedAt (Application Business 5.1)
+    ck("UA-09", JSON.stringify(updAll()) === JSON.stringify(updBefore), `updatedAt đổi sau auto-close: ${JSON.stringify(updBefore)} -> ${JSON.stringify(updAll())}`);
+    const same = (j) => sql(`SELECT updatedAt = createdAt FROM job WHERE jobId='${j.jobId}'`) === "1";
+    ck("UA-09", [yesterday, longAgo, unverified].every(same), "Job bị auto-close phải còn updatedAt == createdAt");
     const line = getLog().match(/Đã tự đóng \d+ Job quá hạn/);
     ck("AC-05", !!line, `không thấy log chạy bù trong BE phụ: ${getLog().slice(-300)}`);
     if (line) note("AC-05", line[0]);

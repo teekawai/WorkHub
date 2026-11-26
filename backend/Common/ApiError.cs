@@ -13,6 +13,7 @@ public  class ApiErrorCodes
     public const string EmployerNotVerified = "EMPLOYER_NOT_VERIFIED";
     public const string NotJobOwner = "NOT_JOB_OWNER";
     public const string JobNotFound = "JOB_NOT_FOUND";
+    public const string JobHasApplications = "JOB_HAS_APPLICATIONS";
     public const string EmployerNotFound = "EMPLOYER_NOT_FOUND";
     public const string EmployerProfileChanged = "EMPLOYER_PROFILE_CHANGED";
     public const string JobAlreadyClosed = "JOB_ALREADY_CLOSED";
@@ -29,6 +30,10 @@ public  class ApiErrorCodes
     public const string TaxCodeLocked = "TAX_CODE_LOCKED";
     public const string RequestInProgress = "REQUEST_IN_PROGRESS";
     public const string IdempotencyKeyReused = "IDEMPOTENCY_KEY_REUSED";
+    public const string FinderProfileNotFound = "FINDER_PROFILE_NOT_FOUND";
+    public const string ApplicationNotFound = "APPLICATION_NOT_FOUND"; // khai báo sẵn, dùng ở Bước 4
+    public const string JobNotOpen = "JOB_NOT_OPEN";
+    public const string AlreadyApplied = "ALREADY_APPLIED";
 }
 
 // Body lỗi chuẩn: { code, message, errors }

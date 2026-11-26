@@ -109,6 +109,8 @@ namespace backend.Controllers
                 {
                     UserId = currentUserId,
                     CompanyName = dto.CompanyName,
+                    // shortcut: mã trùng (~1/2 tỷ) rơi vào nhánh CompanyNameTaken bên dưới, không retry
+                    SlugCode = Slug.NewCode(),
                     Address = dto.Address,
                     Description = dto.Description,
                     Website = dto.Website,
@@ -170,7 +172,9 @@ namespace backend.Controllers
                 return NotFound(new ApiError(ApiErrorCodes.NotFound, "Chưa có hồ sơ"));
             }
             string logoFolder = $"WorkHub/employer/logo/{profile.UserId}"; //tách theo từng employer, trước đây để chung 1 folder cho mọi employer
-            string logoPublicId = $"{logoFolder}/{profile.User.Username}_Logo"; //cố định theo user -> upload sau sẽ ghi đè đúng file này, không tạo file mới
+            // publicId chỉ là tên (folder nằm ở Folder, ghép cả hai thì Cloudinary lặp folder); mỗi lần upload 1 tên mới -> không ghi đè logo đang dùng (G4)
+            string logoPublicId = $"{profile.User.Username}_Logo_{Guid.NewGuid():N}";
+            var oldLogo = profile.Logo;
 
             var result = await _fileUploadService.Upload_CV_AVT(avatar, logoFolder, logoPublicId, new[] { ".jpg", ".png" }, 5 * 1024 * 1024);
             if (!result.IsSuccess)
@@ -179,7 +183,16 @@ namespace backend.Controllers
             }
 
             profile.Logo = result.Url;
-            await _context.SaveChangesAsync();
+            try
+            {
+                await _context.SaveChangesAsync();
+            }
+            catch
+            {
+                await _fileUploadService.DeleteFileAsync(result.PublicId!); // lưu DB lỗi -> xóa file mới, logo cũ còn nguyên; lỗi để global handler trả 500 như cũ
+                throw;
+            }
+            await _fileUploadService.DeleteByUrlAsync(oldLogo); // DB đã trỏ logo mới -> dọn file cũ
             await _cache.RemoveAsync(ProfileRoles.Employer, currentUserId);
             return Ok(result.Url);
         }

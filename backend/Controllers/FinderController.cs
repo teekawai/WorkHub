@@ -2,6 +2,7 @@ using backend.Common;
 using backend.DTO;
 using backend.DTO.FinderProfileDTO;
 using backend.Models;
+using backend.Services.applications;
 using backend.Services.files;
 using backend.Services.cache;
 using Microsoft.AspNetCore.RateLimiting;
@@ -133,7 +134,9 @@ namespace backend.Controllers
                 return NotFound(new ApiError(ApiErrorCodes.NotFound, "Chưa có hồ sơ"));
             }
             string avatarFolder = $"WorkHub/finder/avatar/{profile.UserId}";
-            string avatarPublicId = $"{avatarFolder}/{profile.User.Username}_Avatar";
+            // publicId chỉ là tên (folder nằm ở Folder, ghép cả hai thì Cloudinary lặp folder); mỗi lần upload 1 tên mới -> không ghi đè file hồ sơ đang trỏ tới (G4)
+            string avatarPublicId = $"{profile.User.Username}_Avatar_{Guid.NewGuid():N}";
+            var oldAvatar = profile.Avatar;
 
             var result = await _fileUploadService.Upload_CV_AVT(avatar, avatarFolder, avatarPublicId, new[] { ".jpg", ".png" }, 2 * 1024 * 1024);
             if (!result.IsSuccess)
@@ -149,9 +152,10 @@ namespace backend.Controllers
             catch (Exception)
             {
                 // TR-1: Rollback xóa file Cloudinary nếu lưu DB thất bại
-                await _fileUploadService.DeleteFileAsync(avatarPublicId);
+                await _fileUploadService.DeleteFileAsync(result.PublicId!); // chỉ xóa file mới, file cũ còn nguyên
                 return StatusCode(500, new ApiError(ApiErrorCodes.InternalError, "Lỗi khi lưu avatar vào cơ sở dữ liệu"));
             }
+            await _fileUploadService.DeleteByUrlAsync(oldAvatar); // DB đã trỏ file mới -> dọn file cũ; lỗi chỉ để lại file thừa
             await _cache.RemoveAsync(ProfileRoles.Finder, currentUserId);
             return Ok(result.Url);
         }
@@ -167,9 +171,11 @@ namespace backend.Controllers
                 return NotFound(new ApiError(ApiErrorCodes.NotFound, "Chưa có hồ sơ"));
             }
             string CVfolder = $"WorkHub/finder/cv/{profile.UserId}";
-            string CVpublicId = $"{CVfolder}/{profile.User.Username}_CV";
+            // chỉ là tên, folder nằm ở Folder (tránh lặp folder); mỗi lần upload 1 tên mới -> không ghi đè file hồ sơ đang trỏ tới (G4)
+            string CVpublicId = $"{profile.User.Username}_CV_{Guid.NewGuid():N}";
+            var oldCv = profile.Cv;
 
-            var result = await _fileUploadService.Upload_CV_AVT(cv, CVfolder, CVpublicId, new[] { ".docx", ".pdf" }, 5 * 1024 * 1024, isRaw: true);
+            var result = await _fileUploadService.Upload_CV_AVT(cv, CVfolder, CVpublicId, ApplyRequestValidator.CvExtensions, ApplyRequestValidator.MaxCvBytes, isRaw: true);
             if (!result.IsSuccess)
             {
                 return BadRequest(new ApiError(ApiErrorCodes.ValidationError, result.ErrorMessage!));
@@ -183,9 +189,10 @@ namespace backend.Controllers
             catch (Exception)
             {
                 // TR-1: Rollback xóa file Cloudinary nếu lưu DB thất bại
-                await _fileUploadService.DeleteFileAsync(CVpublicId, isRaw: true);
+                await _fileUploadService.DeleteFileAsync(result.PublicId!, isRaw: true); // chỉ xóa file mới, file cũ còn nguyên
                 return StatusCode(500, new ApiError(ApiErrorCodes.InternalError, "Lỗi khi lưu CV vào cơ sở dữ liệu"));
             }
+            await _fileUploadService.DeleteByUrlAsync(oldCv, isRaw: true); // đơn ứng tuyển có bản copy riêng nên xóa CV cũ không ảnh hưởng đơn
             await _cache.RemoveAsync(ProfileRoles.Finder, currentUserId);
             return Ok(result.Url);
         }

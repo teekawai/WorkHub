@@ -14,8 +14,8 @@ const errText = (e) => String(e.stderr || e.message || e);
 
 // INSERT job tối thiểu, đủ cột NOT NULL
 const insJob = (jobId, employerId) =>
-  `INSERT INTO job (jobId,employerId,jobTitle,description,requirement,applicantBenefit,deadline,workType,numberOfPosition,status,location,createdAt,category,salaryType,yearOfExperience) ` +
-  `VALUES ('${jobId}','${employerId}','atk','d','r','b','2099-01-01','Onsite',1,'Open','Hà Nội',UTC_TIMESTAMP(),'IT','Range',0)`;
+  `INSERT INTO job (jobId,employerId,jobTitle,description,requirement,applicantBenefit,deadline,workType,numberOfPosition,status,location,createdAt,updatedAt,category,salaryType,yearOfExperience) ` +
+  `VALUES ('${jobId}','${employerId}','atk','d','r','b','2099-01-01','Onsite',1,'Open','Hà Nội',UTC_TIMESTAMP(),UTC_TIMESTAMP(),'IT','Range',0)`;
 const NO_FK = "SET FOREIGN_KEY_CHECKS=0; ";
 
 export default async function run() {
@@ -69,7 +69,7 @@ export default async function run() {
     const tax = sql(`SELECT taxCode FROM employerprofile WHERE userId='${E1.id}'`);
     const company = sql(`SELECT companyName FROM employerprofile WHERE userId='${E1.id}'`);
     const insProfile = (companyName, taxCode) =>
-      NO_FK + `INSERT INTO employerprofile (userId,companyName,address,field,phone,taxCode,isVerified) VALUES ('${ghost}','${companyName}','a','IT','0901234567','${taxCode}',0)`;
+      NO_FK + `INSERT INTO employerprofile (userId,companyName,slugCode,address,field,phone,taxCode,isVerified) VALUES ('${ghost}','${companyName}','${uid().replace(/[^a-z0-9]/g, '').slice(0, 6)}','a','IT','0901234567','${taxCode}',0)`;
     try {
       let err = "";
       try { sql(insProfile(`atk dup ${uid().slice(0, 8)}`, tax)); } catch (e) { err = errText(e); }

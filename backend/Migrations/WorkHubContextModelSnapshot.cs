@@ -39,11 +39,29 @@ namespace backend.Migrations
                         .HasColumnType("text")
                         .HasColumnName("coverLetter");
 
+                    b.Property<string>("CvUrl")
+                        .IsRequired()
+                        .HasMaxLength(255)
+                        .HasColumnType("varchar(255)")
+                        .HasColumnName("cvUrl");
+
+                    b.Property<string>("Email")
+                        .IsRequired()
+                        .HasMaxLength(255)
+                        .HasColumnType("varchar(255)")
+                        .HasColumnName("email");
+
                     b.Property<string>("FinderId")
                         .IsRequired()
                         .HasMaxLength(36)
                         .HasColumnType("varchar(36)")
                         .HasColumnName("finderId");
+
+                    b.Property<string>("FullName")
+                        .IsRequired()
+                        .HasMaxLength(100)
+                        .HasColumnType("varchar(100)")
+                        .HasColumnName("fullName");
 
                     b.Property<string>("JobId")
                         .IsRequired()
@@ -51,11 +69,20 @@ namespace backend.Migrations
                         .HasColumnType("varchar(36)")
                         .HasColumnName("jobId");
 
+                    b.Property<string>("RejectReason")
+                        .HasMaxLength(500)
+                        .HasColumnType("varchar(500)")
+                        .HasColumnName("rejectReason");
+
                     b.Property<string>("Status")
                         .IsRequired()
                         .HasMaxLength(20)
                         .HasColumnType("varchar(20)")
                         .HasColumnName("status");
+
+                    b.Property<DateTime?>("StatusChangedAt")
+                        .HasColumnType("datetime")
+                        .HasColumnName("statusChangedAt");
 
                     b.HasKey("ApplicationId")
                         .HasName("PRIMARY");
@@ -116,6 +143,12 @@ namespace backend.Migrations
                         .HasColumnType("varchar(15)")
                         .HasColumnName("phone");
 
+                    b.Property<string>("SlugCode")
+                        .IsRequired()
+                        .HasMaxLength(6)
+                        .HasColumnType("varchar(6)")
+                        .HasColumnName("slugCode");
+
                     b.Property<string>("TaxCode")
                         .IsRequired()
                         .HasMaxLength(15)
@@ -136,6 +169,9 @@ namespace backend.Migrations
                         .HasName("PRIMARY");
 
                     b.HasIndex(new[] { "CompanyName" }, "companyName")
+                        .IsUnique();
+
+                    b.HasIndex(new[] { "SlugCode" }, "slugCode")
                         .IsUnique();
 
                     b.HasIndex(new[] { "TaxCode" }, "taxCode")
@@ -294,6 +330,10 @@ namespace backend.Migrations
                         .HasColumnType("varchar(255)")
                         .HasColumnName("subCategory");
 
+                    b.Property<DateTime>("UpdatedAt")
+                        .HasColumnType("datetime")
+                        .HasColumnName("updatedAt");
+
                     b.Property<string>("WorkType")
                         .IsRequired()
                         .HasMaxLength(20)
@@ -312,32 +352,6 @@ namespace backend.Migrations
                     b.HasIndex(new[] { "Status", "Deadline" }, "ix_job_status_deadline");
 
                     b.ToTable("job", (string)null);
-                });
-
-            modelBuilder.Entity("backend.Models.RefreshToken", b =>
-                {
-                    b.Property<string>("UserId")
-                        .HasMaxLength(36)
-                        .HasColumnType("varchar(36)")
-                        .HasColumnName("userId");
-
-                    b.Property<DateTime>("ExpireAt")
-                        .HasColumnType("datetime")
-                        .HasColumnName("expireAt");
-
-                    b.Property<bool>("IsRevoked")
-                        .HasColumnType("tinyint(1)")
-                        .HasColumnName("isRevoked");
-
-                    b.Property<string>("Token")
-                        .IsRequired()
-                        .HasColumnType("text")
-                        .HasColumnName("token");
-
-                    b.HasKey("UserId")
-                        .HasName("PRIMARY");
-
-                    b.ToTable("refreshToken", (string)null);
                 });
 
             modelBuilder.Entity("backend.Models.User", b =>
@@ -470,18 +484,6 @@ namespace backend.Migrations
 
                     b.Navigation("Salary")
                         .IsRequired();
-                });
-
-            modelBuilder.Entity("backend.Models.RefreshToken", b =>
-                {
-                    b.HasOne("backend.Models.User", "User")
-                        .WithMany()
-                        .HasForeignKey("UserId")
-                        .OnDelete(DeleteBehavior.Cascade)
-                        .IsRequired()
-                        .HasConstraintName("fk_refreshtoken_user");
-
-                    b.Navigation("User");
                 });
 
             modelBuilder.Entity("backend.Models.Employerprofile", b =>

@@ -8,7 +8,7 @@
  * - Dọn dữ liệu: mặc định CHỈ xóa dữ liệu do run này tạo (lọc theo userId của run). --keep để giữ lại.
  * - Cờ: --rounds=N (số vòng test song song, mặc định 25), --skip-id14, --be-log=<file log BE> (cho SQL-01), --keep.
  */
-import { execFileSync, spawn } from "node:child_process";
+import { execFile, execFileSync, spawn } from "node:child_process";
 import net from "node:net";
 import fs from "node:fs";
 import path from "node:path";
@@ -39,6 +39,10 @@ export function sql(q) {
     { env: { ...process.env, MYSQL_PWD: cs.password }, encoding: "utf8", stdio: ["ignore", "pipe", "pipe"] }
   ).trim();
 }
+// bản không chặn event loop, dùng khi cần chạy SQL song song với request API (race)
+export const sqlAsync = (q) => new Promise((resolve, reject) =>
+  execFile(MYSQL, ["-h", cs.server, "-P", cs.port || "3306", "-u", cs.user, "--default-character-set=utf8mb4", "-N", "-B", cs.database, "-e", q],
+    { env: { ...process.env, MYSQL_PWD: cs.password }, encoding: "utf8" }, (e, out, err) => (e ? reject(new Error(err || e.message)) : resolve(out.trim()))));
 // mysql.exe trên Windows xuống dòng bằng \r\n
 export const sqlRow = (q) => sql(q).split(/\r?\n/)[0].split("\t");
 export const sqlCol = (q) => { const o = sql(q); return o === "" ? [] : o.split(/\r?\n/); };
@@ -228,8 +232,42 @@ export const jobStatusDb = (jobId) => sql(`SELECT status FROM job WHERE jobId='$
 export const jobExists = (jobId) => sqlInt(`SELECT COUNT(*) FROM job WHERE jobId='${jobId}'`) === 1;
 export const snap = (jobId) => sql(`SELECT * FROM job WHERE jobId='${jobId}'`);
 export const appCount = (jobId) => sqlInt(`SELECT COUNT(*) FROM application WHERE jobId='${jobId}'`);
-export const addApp = (finder, jobId) =>
-  sql(`INSERT INTO application (applicationId,finderId,jobId,status,appliedAt,coverLetter) VALUES (UUID(),'${finder.id}','${jobId}','Pending',UTC_TIMESTAMP(),NULL)`);
+// status: Pending | Accepted | Rejected (đơn đã xử lý có statusChangedAt)
+export const appInsertSql = (finder, jobId, status = "Pending") =>
+  `INSERT INTO application (applicationId,finderId,jobId,fullName,email,cvUrl,status,appliedAt,statusChangedAt,coverLetter) VALUES (UUID(),'${finder.id}','${jobId}','QA Finder','qa@test.com','https://example.com/cv.pdf','${status}',UTC_TIMESTAMP(),${status === "Pending" ? "NULL" : "UTC_TIMESTAMP()"},NULL)`;
+export const addApp = (finder, jobId, status = "Pending") => sql(appInsertSql(finder, jobId, status));
+
+// Mở 1 phiên mysql riêng (child process), chạy `stmts` trong transaction và GIỮ MỞ tới khi commit()/rollback().
+// Dùng để dựng race thật: INSERT đơn chưa commit trong lúc gọi DELETE. Phiên chết thì MySQL tự rollback.
+export function holdTx(stmts) {
+  const child = spawn(MYSQL, ["-h", cs.server, "-P", cs.port || "3306", "-u", cs.user, "--default-character-set=utf8mb4", "-N", "-B", "--unbuffered", cs.database], {
+    env: { ...process.env, MYSQL_PWD: cs.password },
+    stdio: ["pipe", "pipe", "pipe"],
+  });
+  let out = "", err = "";
+  child.stdout.on("data", (d) => { out += d; });
+  child.stderr.on("data", (d) => { err += d; });
+  const end = (word) => new Promise((resolve) => {
+    child.on("exit", resolve);
+    child.stdin.end(`${word};
+`);
+  });
+  return new Promise((resolve, reject) => {
+    const timer = setTimeout(() => { child.kill(); reject(new Error(`holdTx quá hạn: ${err || out}`)); }, 15000);
+    child.on("error", (e) => { clearTimeout(timer); reject(e); });
+    const tick = setInterval(() => {
+      if (err && !/Using a password/i.test(err)) { clearInterval(tick); clearTimeout(timer); child.kill(); reject(new Error(`holdTx lỗi SQL: ${err}`)); }
+      else if (out.includes("READY")) {
+        clearInterval(tick); clearTimeout(timer);
+        resolve({ commit: () => end("COMMIT"), rollback: () => end("ROLLBACK"), kill: () => child.kill() });
+      }
+    }, 20);
+    child.stdin.write(`START TRANSACTION;
+${stmts};
+SELECT 'READY';
+`);
+  });
+}
 
 export const RESP_KEYS = [
   "jobId", "jobTitle", "category", "subCategory", "location", "workType", "skillRequired", "description", "requirement",
@@ -237,6 +275,11 @@ export const RESP_KEYS = [
   "createdAt", "companyName", "logo",
 ];
 export const DETAIL_KEYS = [...RESP_KEYS, "companyAddress", "companyFoundedYear", "companyDescription"];
+// chi tiết công khai có thêm hasApplied (Application Business 2.5); chi tiết của Employer không có
+export const PUBLIC_DETAIL_KEYS = [...DETAIL_KEYS, "hasApplied"];
+// 2 API của Employer có thêm applicationCount (Application Business 5) và updatedAt (Business 5.1); các API khác không có
+export const EMPLOYER_LIST_KEYS = [...RESP_KEYS, "applicationCount", "updatedAt"];
+export const EMPLOYER_DETAIL_KEYS = [...DETAIL_KEYS, "applicationCount", "updatedAt"];
 
 // ─── Tiện ích chạy song song ───────────────────────────────────
 export const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
@@ -327,7 +370,6 @@ async function cleanup() {
     sql(`DELETE FROM job WHERE employerId IN (${l})`);
     sql(`DELETE FROM employerprofile WHERE userId IN (${l})`);
     sql(`DELETE FROM finderprofile WHERE userId IN (${l})`);
-    sql(`DELETE FROM refreshToken WHERE userId IN (${l})`);
     sql(`DELETE FROM users WHERE userId IN (${l})`);
     const left = sqlInt(`SELECT (SELECT COUNT(*) FROM users WHERE userId IN (${l})) + (SELECT COUNT(*) FROM job WHERE employerId IN (${l}))`);
     console.log(`\n🧹 Cleanup: đã xoá dữ liệu của ${ids.length} user của run, còn lại ${left} dòng`);

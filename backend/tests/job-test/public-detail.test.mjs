@@ -1,7 +1,7 @@
 // D: GET /api/jobs/:id — Chi tiết Job công khai + thông tin công ty (Business 5.1, 5.4)
 // Chạy riêng: node backend/tests/job-test/public-detail.test.mjs   (chạy tất cả: node backend/tests/job-test/run.mjs)
 import {
-  DETAIL_KEYS, J, TODAY, addDays, bigDesc, ck, errStr, isErr, isMain, mkJob, profileOf, raw, runSuites, sameSet, setDeadline, setVerified, sortedKeys,
+  PUBLIC_DETAIL_KEYS, J, TODAY, addDays, bigDesc, ck, errStr, isErr, isMain, mkJob, profileOf, raw, runSuites, sameSet, setDeadline, setVerified, sortedKeys,
 } from "./lib.mjs";
 
 export const name = "D: GET /api/jobs/:id";
@@ -14,7 +14,7 @@ export default async function run(ctx) {
   {
     const j = await mkJob(E1, { jobTitle: "D job" });
     const r = await raw("GET", `/jobs/${j.jobId}`);
-    ck("D-01", r.status === 200 && sameSet(Object.keys(r.data), DETAIL_KEYS), `keys=${r.data && sortedKeys(r.data)}`);
+    ck("D-01", r.status === 200 && sameSet(Object.keys(r.data), PUBLIC_DETAIL_KEYS), `keys=${r.data && sortedKeys(r.data)}`);
     ck("D-01", r.data.companyName === profileOf.E1.companyName && r.data.companyAddress === profileOf.E1.address && r.data.companyFoundedYear === 2015, "giá trị công ty");
     ck("D-01", r.data.companyDescription === bigDesc && r.data.companyDescription.length === 3000, `companyDescription length=${r.data.companyDescription?.length}`);
     ck("D-02", !/employerId|phone|taxCode|userId|passwordHash|token/i.test(Object.keys(r.data).join(",")), "lộ field nhạy cảm");
