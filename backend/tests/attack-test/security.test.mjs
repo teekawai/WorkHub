@@ -373,7 +373,6 @@ export default async function run() {
   const { employers: [E1, E2, EDEL, E3] } = await makeCrowd({ employers: 4, verified: 3 });
   const adm = await makeTempAdmin("SEC");
   // EDEL: token vẫn hợp lệ 15 phút nhưng user + hồ sơ đã bị xóa khỏi DB
-  sql(`DELETE FROM refreshToken WHERE userId='${EDEL.id}'`);
   sql(`DELETE FROM employerprofile WHERE userId='${EDEL.id}'`);
   sql(`DELETE FROM users WHERE userId='${EDEL.id}'`);
   const W = { E1, E2, EDEL, E3, adm };

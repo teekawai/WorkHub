@@ -48,6 +48,7 @@ public partial class Job
     public string? SkillRequired { get; set; } // Các skill(tag, phục vụ phần tìm kiếm)
 
     public DateTime CreatedAt { get; set; } //thời gian tạo job post này
+    public DateTime UpdatedAt { get; set; } // lần PUT nội dung gần nhất (UTC, cắt giây); đóng tin / auto-close không đổi
 
     public virtual ICollection<Application> Applications { get; set; } = new List<Application>();
 

@@ -34,6 +34,10 @@ namespace backend.DTO.JobDTO
         [System.Text.Json.Serialization.JsonIgnore(Condition = System.Text.Json.Serialization.JsonIgnoreCondition.WhenWritingNull)]
         public int? ApplicationCount { get; set; }
 
+        // UTC (Kind = Utc); chỉ 2 API của Employer (danh sách + chi tiết) gán, còn lại null -> không có field (Business 5.1)
+        [System.Text.Json.Serialization.JsonIgnore(Condition = System.Text.Json.Serialization.JsonIgnoreCondition.WhenWritingNull)]
+        public DateTime? UpdatedAt { get; set; }
+
         // job phải đã Include Employer
         public static JobResponseDTO FromJob(Models.Job job)
         {

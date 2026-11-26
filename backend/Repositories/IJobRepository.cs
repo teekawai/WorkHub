@@ -11,7 +11,7 @@ namespace backend.Repositories
         Task<Job?> GetByIdAsync(string jobId);
 
         // Job của 1 employer, mới nhất trước (Business 6.7), trả kèm tổng số để tính pagination
-        Task<(List<Job> Items, int TotalItems)> GetByEmployerAsync(string employerId, int page, int limit);
+        Task<(List<Job> Items, int TotalItems)> GetByEmployerAsync(string employerId, int page, int limit, string? keyword, string? status, DateOnly today);
 
         // tìm kiếm công khai: JobSearchService ghép điều kiện lọc + sắp xếp (nghiệp vụ Business 6), repo chỉ đếm + lấy 1 trang (kèm Employer)
         Task<(List<Job> Items, int TotalItems)> SearchAsync(Func<IQueryable<Job>, IQueryable<Job>> buildQuery, int page, int limit);

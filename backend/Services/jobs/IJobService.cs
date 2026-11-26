@@ -23,7 +23,7 @@ namespace backend.Services.jobs
         Task<ServiceResult<JobDetailResponseDTO>> GetPublicDetailAsync(string jobId, string? finderId = null);
 
         // danh sách Job của chính Employer, phân trang (Business 5.2, 6.7)
-        Task<ServiceResult<PagedResult<JobResponseDTO>>> GetListForOwnerAsync(string employerId, int page, int limit);
+        Task<ServiceResult<PagedResult<JobResponseDTO>>> GetListForOwnerAsync(string employerId, int page, int limit, string? keyword = null, string? status = null);
 
         // chi tiết 1 Job của chính Employer, không lọc Status/Deadline/IsVerified (Business 5.3)
         Task<ServiceResult<JobDetailResponseDTO>> GetDetailForOwnerAsync(string employerId, string jobId);

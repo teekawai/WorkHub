@@ -25,12 +25,14 @@ namespace backend.Services.jobs
             var errors = JobRequestValidator.Validate(request, VnTime.Today(UtcNow));
             if (errors.Count > 0) return ServiceResult<JobResponseDTO>.ValidationFail(errors);
 
+            var createdAt = TruncateToSecond(UtcNow); // cột datetime không có phần lẻ giây (Business 1.6)
             var job = new Job
             {
                 JobId = Guid.NewGuid().ToString(),
                 EmployerId = employerId,
                 Status = JobStatuses.Open,
-                CreatedAt = TruncateToSecond(UtcNow) // cột datetime không có phần lẻ giây (Business 1.6)
+                CreatedAt = createdAt,
+                UpdatedAt = createdAt // cùng giá trị, không đọc giờ lần 2 (Business 5.1)
             };
             CopyRequestToJob(job, request);
             if (!await _repo.AddIfEmployerVerifiedAsync(job))
@@ -54,6 +56,7 @@ namespace backend.Services.jobs
             if (errors.Count > 0) return ServiceResult<JobResponseDTO>.ValidationFail(errors);
 
             CopyRequestToJob(job, request);
+            job.UpdatedAt = TruncateToSecond(UtcNow); // MySQL datetime làm tròn phần lẻ giây nên phải cắt (Business 1.6, 5.1)
             if (!await _repo.UpdateContentAsync(job))
             {
                 // Status đổi giữa lúc đọc và ghi: đã xóa -> 404, đã đóng -> JOB_NOT_EDITABLE (Business 2.4.1)
@@ -108,16 +111,28 @@ namespace backend.Services.jobs
             return ServiceResult<JobDetailResponseDTO>.Success(dto);
         }
 
-        public async Task<ServiceResult<PagedResult<JobResponseDTO>>> GetListForOwnerAsync(string employerId, int page, int limit)
+        public async Task<ServiceResult<PagedResult<JobResponseDTO>>> GetListForOwnerAsync(string employerId, int page, int limit, string? keyword = null, string? status = null)
         {
-            var errors = Paging.Validate(page, limit);
+            // trim; rỗng / toàn khoảng trắng = không lọc (Business 5.1)
+            keyword = string.IsNullOrWhiteSpace(keyword) ? null : keyword.Trim();
+            status = string.IsNullOrWhiteSpace(status) ? null : status.Trim();
+
+            var errors = Paging.Validate(page, limit); // gộp lỗi 4 field vào 1 lần trả
+            if (keyword?.Length > SearchText.MaxKeywordLength) errors["keyword"] = new[] { SearchText.KeywordTooLongMessage };
+            if (status != null && !OwnerJobStatus.IsValid(status)) errors["status"] = new[] { JobRequestValidator.InvalidMessage };
             if (errors.Count > 0) return ServiceResult<PagedResult<JobResponseDTO>>.ValidationFail(errors);
 
             limit = Paging.ClampLimit(limit);
-            var (items, total) = await _repo.GetByEmployerAsync(employerId, page, limit);
+            var (items, total) = await _repo.GetByEmployerAsync(employerId, page, limit, keyword, status, VnTime.Today(UtcNow));
             // đếm đơn cả trang trong 1 query; Job không có đơn không có key -> 0 (không để null vì null làm mất field trong JSON)
             var counts = await _repo.CountApplicationsByJobsAsync(items.Select(j => j.JobId));
-            var dtos = items.Select(j => { var dto = JobResponseDTO.FromJob(j); dto.ApplicationCount = counts.GetValueOrDefault(j.JobId); return dto; }).ToList();
+            var dtos = items.Select(j =>
+            {
+                var dto = JobResponseDTO.FromJob(j);
+                dto.ApplicationCount = counts.GetValueOrDefault(j.JobId);
+                dto.UpdatedAt = DateTime.SpecifyKind(j.UpdatedAt, DateTimeKind.Utc); // đọc từ DB là Unspecified -> thiếu Z
+                return dto;
+            }).ToList();
             return ServiceResult<PagedResult<JobResponseDTO>>.Success(
                 new PagedResult<JobResponseDTO>(dtos, Paging.Build(total, page, limit)));
         }
@@ -128,6 +143,7 @@ namespace backend.Services.jobs
             if (job == null) return fail!;
             var dto = JobDetailResponseDTO.FromJobWithCompany(job);
             dto.ApplicationCount = await _repo.CountApplicationsByJobAsync(jobId);
+            dto.UpdatedAt = DateTime.SpecifyKind(job.UpdatedAt, DateTimeKind.Utc);
             return ServiceResult<JobDetailResponseDTO>.Success(dto);
         }
 

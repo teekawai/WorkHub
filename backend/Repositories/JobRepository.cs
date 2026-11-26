@@ -20,9 +20,25 @@ namespace backend.Repositories
         }
 
         // lấy job để xem danh sách của công ty đó
-        public Task<(List<Job> Items, int TotalItems)> GetByEmployerAsync(string employerId, int page, int limit)
+        // keyword / status đã được Service trim + validate (null = không lọc); today = hôm nay lịch VN do Service tính
+        public Task<(List<Job> Items, int TotalItems)> GetByEmployerAsync(string employerId, int page, int limit, string? keyword, string? status, DateOnly today)
         {
-            return ReadWithEmployer().Where(j => j.EmployerId == employerId).OrderByDescending(j => j.CreatedAt).ToPageAsync(page, limit);
+            var query = ReadWithEmployer().Where(j => j.EmployerId == employerId);
+            // chỉ khớp tên tin; đ/Đ -> d ở phía cột như tìm kiếm công khai (Business 5.1, 6.3)
+            if (keyword != null)
+            {
+                var kw = SearchText.Normalize(keyword);
+                query = query.Where(j => j.JobTitle.Replace("đ", "d").Replace("Đ", "d").Contains(kw));
+            }
+            // hết hạn xét trước Closed, khớp badge FE (Business 5.1)
+            query = status switch
+            {
+                OwnerJobStatus.Expired => query.Where(j => j.Deadline < today),
+                OwnerJobStatus.Open => query.Where(j => j.Status == JobStatuses.Open && j.Deadline >= today),
+                OwnerJobStatus.Closed => query.Where(j => j.Status == JobStatuses.Closed && j.Deadline >= today),
+                _ => query
+            };
+            return query.OrderByDescending(j => j.CreatedAt).ToPageAsync(page, limit);
         }
 
         public Task<(List<Job> Items, int TotalItems)> SearchAsync(Func<IQueryable<Job>, IQueryable<Job>> buildQuery, int page, int limit)

@@ -277,9 +277,9 @@ export const RESP_KEYS = [
 export const DETAIL_KEYS = [...RESP_KEYS, "companyAddress", "companyFoundedYear", "companyDescription"];
 // chi tiết công khai có thêm hasApplied (Application Business 2.5); chi tiết của Employer không có
 export const PUBLIC_DETAIL_KEYS = [...DETAIL_KEYS, "hasApplied"];
-// 2 API của Employer có thêm applicationCount (Application Business 5); các API khác không có
-export const EMPLOYER_LIST_KEYS = [...RESP_KEYS, "applicationCount"];
-export const EMPLOYER_DETAIL_KEYS = [...DETAIL_KEYS, "applicationCount"];
+// 2 API của Employer có thêm applicationCount (Application Business 5) và updatedAt (Business 5.1); các API khác không có
+export const EMPLOYER_LIST_KEYS = [...RESP_KEYS, "applicationCount", "updatedAt"];
+export const EMPLOYER_DETAIL_KEYS = [...DETAIL_KEYS, "applicationCount", "updatedAt"];
 
 // ─── Tiện ích chạy song song ───────────────────────────────────
 export const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
@@ -370,7 +370,6 @@ async function cleanup() {
     sql(`DELETE FROM job WHERE employerId IN (${l})`);
     sql(`DELETE FROM employerprofile WHERE userId IN (${l})`);
     sql(`DELETE FROM finderprofile WHERE userId IN (${l})`);
-    sql(`DELETE FROM refreshToken WHERE userId IN (${l})`);
     sql(`DELETE FROM users WHERE userId IN (${l})`);
     const left = sqlInt(`SELECT (SELECT COUNT(*) FROM users WHERE userId IN (${l})) + (SELECT COUNT(*) FROM job WHERE employerId IN (${l}))`);
     console.log(`\n🧹 Cleanup: đã xoá dữ liệu của ${ids.length} user của run, còn lại ${left} dòng`);

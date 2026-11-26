@@ -22,7 +22,7 @@ namespace backend.Services.admin
         {
             var keyword = string.IsNullOrWhiteSpace(query.Keyword) ? null : query.Keyword.Trim();
             var errors = Paging.Validate(query.Page, query.Limit);
-            if (keyword?.Length > SearchText.MaxKeywordLength) errors["keyword"] = new[] { $"Tối đa {SearchText.MaxKeywordLength} ký tự" };
+            if (keyword?.Length > SearchText.MaxKeywordLength) errors["keyword"] = new[] { SearchText.KeywordTooLongMessage };
             if (errors.Count > 0) return ServiceResult<PagedResult<AdminEmployerListItemDTO>>.ValidationFail(errors);
 
             var limit = Paging.ClampLimit(query.Limit);

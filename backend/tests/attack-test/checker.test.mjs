@@ -14,8 +14,8 @@ const errText = (e) => String(e.stderr || e.message || e);
 
 // INSERT job tối thiểu, đủ cột NOT NULL
 const insJob = (jobId, employerId) =>
-  `INSERT INTO job (jobId,employerId,jobTitle,description,requirement,applicantBenefit,deadline,workType,numberOfPosition,status,location,createdAt,category,salaryType,yearOfExperience) ` +
-  `VALUES ('${jobId}','${employerId}','atk','d','r','b','2099-01-01','Onsite',1,'Open','Hà Nội',UTC_TIMESTAMP(),'IT','Range',0)`;
+  `INSERT INTO job (jobId,employerId,jobTitle,description,requirement,applicantBenefit,deadline,workType,numberOfPosition,status,location,createdAt,updatedAt,category,salaryType,yearOfExperience) ` +
+  `VALUES ('${jobId}','${employerId}','atk','d','r','b','2099-01-01','Onsite',1,'Open','Hà Nội',UTC_TIMESTAMP(),UTC_TIMESTAMP(),'IT','Range',0)`;
 const NO_FK = "SET FOREIGN_KEY_CHECKS=0; ";
 
 export default async function run() {

@@ -5,6 +5,8 @@ using Microsoft.EntityFrameworkCore;
 using backend.Common;
 namespace backend.Services.auth;
 
+
+//service dùng để validate dữ liệu và thêm người dùng mới vào db
 public class RegisterService : INewRegisterService
 {
     private readonly WorkHubContext _context;

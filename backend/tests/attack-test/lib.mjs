@@ -144,7 +144,6 @@ export const adminUnverify = (adm, userId, body) => call(adm, "PATCH", `/admin/e
 /** Xóa admin tạm của RUN NÀY (qa_admin_<TS>_*) + refresh token; không đụng admin thật / của run khác */
 export function cleanTempAdmins() {
   const w = `role='admin' AND LEFT(username,${ADMIN_PREFIX.length})='${ADMIN_PREFIX}'`;
-  sql(`DELETE FROM refreshToken WHERE userId IN (SELECT userId FROM (SELECT userId FROM users WHERE ${w}) t)`);
   sql(`DELETE FROM users WHERE ${w}`);
 }
 
@@ -241,7 +240,6 @@ function cleanSql() {
   sql(`DELETE FROM job WHERE employerId IN (${l})`);
   sql(`DELETE FROM employerprofile WHERE userId IN (${l})`);
   sql(`DELETE FROM finderprofile WHERE userId IN (${l})`);
-  sql(`DELETE FROM refreshToken WHERE userId IN (${l})`);
   sql(`DELETE FROM users WHERE userId IN (${l})`);
   sql(`DROP TABLE IF EXISTS ${PREFIX}dup`);
   cleanTempAdmins();

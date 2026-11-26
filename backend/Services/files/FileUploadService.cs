@@ -58,7 +58,56 @@ namespace backend.Services.files
                 return FileUploadResult.Fail("Lưu file không thành công, vui lòng thử lại"); // chi tiết lỗi Cloudinary chỉ log ở server
             }
 
-            return FileUploadResult.Ok(uploadResult.SecureUrl.ToString());
+            return FileUploadResult.Ok(uploadResult.SecureUrl.ToString(), uploadResult.PublicId);
+        }
+
+        public async Task<FileUploadResult> CopyFromUrlAsync(string url, string folder, string publicId)
+        {
+            try
+            {
+                // url lấy từ hồ sơ trong DB (chỉ ghi qua UploadCV), không nhận từ client
+                var result = await _cloudinary.UploadAsync(new RawUploadParams
+                {
+                    File = new FileDescription(url),
+                    PublicId = publicId,
+                    Overwrite = true,
+                    Invalidate = true,
+                    Folder = folder
+                });
+                if (result.Error != null)
+                {
+                    Console.WriteLine($"[Cloudinary copy error] {result.Error.Message}");
+                    return FileUploadResult.Fail("Lưu file không thành công, vui lòng thử lại");
+                }
+                return FileUploadResult.Ok(result.SecureUrl.ToString(), result.PublicId);
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"[Cloudinary copy error] {ex.Message}");
+                return FileUploadResult.Fail("Lưu file không thành công, vui lòng thử lại");
+            }
+        }
+
+        // URL dạng .../{image|raw}/upload/[v123/]{public_id}[.đuôi]; image bỏ đuôi, raw giữ (đuôi thuộc public_id). Không phải URL Cloudinary -> null
+        public static string? PublicIdFromUrl(string? url, bool isRaw)
+        {
+            const string marker = "/upload/";
+            var i = url?.IndexOf(marker, StringComparison.Ordinal) ?? -1;
+            if (i < 0) return null;
+            var path = Uri.UnescapeDataString(url![(i + marker.Length)..]);
+            if (System.Text.RegularExpressions.Regex.IsMatch(path, @"^v\d+/")) path = path[(path.IndexOf('/') + 1)..];
+            if (!isRaw)
+            {
+                var dot = path.LastIndexOf('.');
+                if (dot > path.LastIndexOf('/')) path = path[..dot];
+            }
+            return path.Length == 0 ? null : path;
+        }
+
+        public Task<bool> DeleteByUrlAsync(string? url, bool isRaw = false)
+        {
+            var publicId = PublicIdFromUrl(url, isRaw);
+            return publicId == null ? Task.FromResult(false) : DeleteFileAsync(publicId, isRaw);
         }
 
         public async Task<bool> DeleteFileAsync(string publicId, bool isRaw = false)

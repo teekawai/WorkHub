@@ -79,7 +79,7 @@ namespace backend.Services.jobs
             if (query.Location != null && !JobLocations.IsValid(query.Location)) Invalid("location");
             if (query.WorkType != null && !JobWorkTypes.IsValid(query.WorkType)) Invalid("workType");
 
-            if (query.Keyword?.Length > SearchText.MaxKeywordLength) errors["keyword"] = new[] { $"Tối đa {SearchText.MaxKeywordLength} ký tự" };
+            if (query.Keyword?.Length > SearchText.MaxKeywordLength) errors["keyword"] = new[] { SearchText.KeywordTooLongMessage };
 
             // khoảng lương phải đủ 2 đầu và là 1 trong 6 khoảng cho sẵn (Business 1.3)
             if (query.SalaryMin == null && query.SalaryMax != null) errors["salaryMin"] = new[] { "Phải gửi cả salaryMin và salaryMax" };

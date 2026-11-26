@@ -582,7 +582,6 @@ async function runUniqueAndPasswordTests() {
     // Dọn dữ liệu do P23-P26 tạo
     try {
       const ids = `SELECT userId FROM (SELECT userId FROM users WHERE email LIKE '${emailLike}') t`;
-      sql(`DELETE FROM refreshToken WHERE userId IN (${ids})`);
       sql(`DELETE FROM employerprofile WHERE userId IN (${ids})`);
       sql(`DELETE FROM finderprofile WHERE userId IN (${ids})`);
       sql(`DELETE FROM users WHERE email LIKE '${emailLike}'`);

@@ -16,7 +16,7 @@ export default async function run(ctx) {
     const a = await J("GET", `/employer/jobs/${j.jobId}`, E1.token);
     const b = await raw("GET", `/jobs/${j.jobId}`);
     const { hasApplied, ...pub } = b.data; // chỉ chi tiết công khai có hasApplied (Application Business 2.5)
-    const { applicationCount, ...emp } = a.data || {}; // chỉ chi tiết Employer có applicationCount (Application Business 5)
+    const { applicationCount, updatedAt, ...emp } = a.data || {}; // chỉ chi tiết Employer có applicationCount (Application Business 5) và updatedAt (Business 5.1)
     ck("I-01", a.status === 200 && sameSet(Object.keys(a.data), EMPLOYER_DETAIL_KEYS) && JSON.stringify(emp) === JSON.stringify(pub), `${errStr(a).slice(0, 200)}`);
     ck("I-03", !/employerId|phone|taxCode|userId/i.test(Object.keys(a.data).join(",")), "lộ field");
     // I-06: applicationCount = 0 khi chưa có đơn (key vẫn có), = số đơn (mọi trạng thái) khi có

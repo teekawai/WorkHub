@@ -72,8 +72,8 @@ namespace backend.Controllers
         // danh sách Job của chính Employer (kể cả chưa xác minh — chỉ xem)
         [HttpGet("/api/employer/jobs")]
         [Authorize(Roles = "employer")]
-        public async Task<IActionResult> GetMyJobs([FromQuery] int page = 1, [FromQuery] int limit = 30) =>
-            (await _jobService.GetListForOwnerAsync(EmployerId!, page, limit)).ToActionResult();
+        public async Task<IActionResult> GetMyJobs([FromQuery] int page = 1, [FromQuery] int limit = 30, [FromQuery] string? keyword = null, [FromQuery] string? status = null) =>
+            (await _jobService.GetListForOwnerAsync(EmployerId!, page, limit, keyword, status)).ToActionResult();
 
         [HttpGet("/api/employer/jobs/{id}")]
         [Authorize(Roles = "employer")]

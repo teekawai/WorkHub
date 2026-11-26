@@ -16,7 +16,6 @@ public partial class WorkHubContext : DbContext
     {
     }
 
-    public virtual DbSet<RefreshToken> RefreshTokens { get; set; }
 
     public virtual DbSet<Application> Applications { get; set; }
 
@@ -216,6 +215,9 @@ public partial class WorkHubContext : DbContext
             entity.Property(e => e.CreatedAt)
                 .HasColumnType("datetime")
                 .HasColumnName("createdAt");
+            entity.Property(e => e.UpdatedAt)
+                .HasColumnType("datetime")
+                .HasColumnName("updatedAt");
             entity.Property(e => e.Deadline)
                 .HasColumnType("date")
                 .HasColumnName("deadline");
@@ -302,27 +304,6 @@ public partial class WorkHubContext : DbContext
             .HasColumnName("email");
         });
 
-        modelBuilder.Entity<RefreshToken>(entity =>
-        {
-            entity.HasKey(e => e.UserId).HasName("PRIMARY");
-            entity.ToTable("refreshToken");
-            entity.Property(e => e.Token)
-            .HasColumnType("text")
-            .HasColumnName("token");
-            entity.Property(e => e.UserId)
-            .HasMaxLength(36)
-            .HasColumnName("userId");
-            entity.Property(e => e.ExpireAt)
-            .HasColumnType("datetime")
-            .HasColumnName("expireAt");
-            entity.Property(e => e.IsRevoked)
-            .HasColumnName("isRevoked");
-
-            entity.HasOne(d => d.User).WithMany()
-             .HasForeignKey(d => d.UserId)
-        .OnDelete(DeleteBehavior.Cascade)
-        .HasConstraintName("fk_refreshtoken_user");
-        });
 
         OnModelCreatingPartial(modelBuilder);
     }

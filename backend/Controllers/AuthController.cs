@@ -29,9 +29,9 @@ namespace backend.Controllers
         private readonly UserRepository _userRepo;
         private readonly ILoginService _loginService;
         private readonly INewRegisterService _registerService;
-        private readonly ITokenValidate _refTokenService;
+        private readonly ITokenValidate _refTokenService;//service validate các token
         private readonly IGoogleAuthService _googleAuthService;
-        private readonly IDatabase _redis;
+        private readonly IDatabase _redis; //redis để lưu refresh token
         private readonly ILogger<AuthController> _logger;
         private readonly IAdminAuthService _adminAuthService;
 
